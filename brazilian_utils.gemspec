@@ -1,11 +1,10 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'brazilian-utils/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "brazilian-utils"
-  spec.version       = BrazilianUtils::VERSION
+  spec.version       = "0.1.0"
   spec.authors       = ["Alex Rocha"]
   spec.email         = ["alex.rochas@yahoo.com.br"]
 
