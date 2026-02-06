@@ -15,6 +15,11 @@ This library provides utilities for working with Brazilian-specific data formats
 ### CNH Utils
 - CNH validation (Carteira Nacional de Habilitação)
 
+### CNPJ Utils
+- CNPJ validation (Cadastro Nacional da Pessoa Jurídica)
+- CNPJ formatting and symbol removal
+- Random CNPJ generation
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -106,6 +111,143 @@ BrazilianUtils::CNHUtils.valid?('123456789')
 - Must contain exactly 11 digits after removing non-numeric characters
 - Cannot be a sequence of the same digit (e.g., "00000000000")
 - Must have valid verification digits (10th and 11th positions)
+
+### CNPJ Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/cnpj.py) implementation.
+
+#### Formatting Functions
+
+##### `remove_symbols(dirty)` / `sieve(dirty)`
+
+Removes specific symbols from a CNPJ string (`.`, `/`, `-`).
+
+```ruby
+require 'brazilian-utils/cnpj-utils'
+
+BrazilianUtils::CNPJUtils.remove_symbols('12.345/6789-01')
+# => "12345678901"
+
+BrazilianUtils::CNPJUtils.remove_symbols('98/76.543-2101')
+# => "98765432101"
+```
+
+##### `format_cnpj(cnpj)`
+
+Formats a valid CNPJ string for visual display.
+
+```ruby
+BrazilianUtils::CNPJUtils.format_cnpj('03560714000142')
+# => "03.560.714/0001-42"
+
+BrazilianUtils::CNPJUtils.format_cnpj('98765432100100')
+# => nil (invalid CNPJ)
+```
+
+##### `display(cnpj)` (Legacy)
+
+Formats a numbers-only CNPJ string with visual aid symbols.
+
+```ruby
+BrazilianUtils::CNPJUtils.display('12345678901234')
+# => "12.345.678/9012-34"
+```
+
+**Note:** `display` is provided for backward compatibility. Use `format_cnpj` for new code.
+
+#### Validation Functions
+
+##### `valid?(cnpj)` / `validate(cnpj)`
+
+Validates a CNPJ by verifying its checksum digits.
+
+```ruby
+# Valid CNPJ
+BrazilianUtils::CNPJUtils.valid?('03560714000142')
+# => true
+
+# Invalid CNPJ - wrong checksum
+BrazilianUtils::CNPJUtils.valid?('00111222000133')
+# => false
+
+# Invalid CNPJ - all same digits
+BrazilianUtils::CNPJUtils.valid?('00000000000000')
+# => false
+
+# Invalid CNPJ - wrong length
+BrazilianUtils::CNPJUtils.valid?('123456789012')
+# => false
+```
+
+**Parameters:**
+- `cnpj` (String): CNPJ string to validate (must be 14 digits)
+
+**Returns:**
+- `Boolean`: `true` if the CNPJ is valid, `false` otherwise
+
+**Validation Rules:**
+- Must be exactly 14 digits
+- Cannot be a sequence of the same digit (e.g., "00000000000000")
+- The last two digits must match the calculated checksum
+
+#### Generation Function
+
+##### `generate(branch: 1)`
+
+Generates a random valid CNPJ with an optional branch number.
+
+```ruby
+# Generate with default branch (1)
+BrazilianUtils::CNPJUtils.generate
+# => "30180536000105"
+
+# Generate with specific branch
+BrazilianUtils::CNPJUtils.generate(branch: 1234)
+# => "01745284123455"
+
+# Generate with branch 42
+BrazilianUtils::CNPJUtils.generate(branch: 42)
+# => "12345678004231"
+```
+
+**Parameters:**
+- `branch` (Integer): Branch number (0001-9999). Defaults to 1. Values over 9999 are taken modulo 10000.
+
+**Returns:**
+- `String`: A randomly generated valid 14-digit CNPJ
+
+**Note:** The branch number appears in positions 9-12 of the CNPJ (e.g., "12345678**0042**31").
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/cnpj-utils'
+
+# Generate a new CNPJ
+cnpj = BrazilianUtils::CNPJUtils.generate(branch: 1)
+puts "Generated: #{cnpj}"
+# => "12345678000195"
+
+# Validate CNPJ
+if BrazilianUtils::CNPJUtils.valid?(cnpj)
+  puts "CNPJ is valid!"
+end
+
+# Format for display
+formatted = BrazilianUtils::CNPJUtils.format_cnpj(cnpj)
+puts "Formatted: #{formatted}"
+# => "12.345.678/0001-95"
+
+# Clean formatted CNPJ
+dirty_cnpj = '03.560.714/0001-42'
+clean = BrazilianUtils::CNPJUtils.remove_symbols(dirty_cnpj)
+puts "Cleaned: #{clean}"
+# => "03560714000142"
+
+# Validate cleaned CNPJ
+puts "Valid? #{BrazilianUtils::CNPJUtils.valid?(clean)}"
+# => true
+```
 
 ### CEP Utils
 
