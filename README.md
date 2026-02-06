@@ -12,6 +12,9 @@ This library provides utilities for working with Brazilian-specific data formats
 ### CPF Utils
 - CPF validation
 
+### CNH Utils
+- CNH validation (Carteira Nacional de Habilitação)
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -49,6 +52,60 @@ require 'brazilian-utils/cpf-utils'
 BrazilianUtils::CPFUtils.valid?('41840660546')
 # => true
 ```
+
+### CNH Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/cnh.py) implementation.
+
+#### `valid?(cnh)`
+
+Validates the registration number for the Brazilian CNH (Carteira Nacional de Habilitação) that was created in 2022.
+
+**Note:** Previous versions of the CNH are not supported in this version.
+
+This function checks if the given CNH is valid based on the format and allowed characters, verifying the verification digits.
+
+```ruby
+require 'brazilian-utils/cnh-utils'
+
+# Valid CNH
+BrazilianUtils::CNHUtils.valid?('98765432100')
+# => true
+
+# Valid CNH with symbols (they are ignored)
+BrazilianUtils::CNHUtils.valid?('987654321-00')
+# => true
+
+BrazilianUtils::CNHUtils.valid?('987.654.321-00')
+# => true
+
+# Invalid CNH - wrong verification digits
+BrazilianUtils::CNHUtils.valid?('12345678901')
+# => false
+
+# Invalid CNH - contains letters
+BrazilianUtils::CNHUtils.valid?('A2C45678901')
+# => false
+
+# Invalid CNH - all same digits
+BrazilianUtils::CNHUtils.valid?('00000000000')
+# => false
+
+# Invalid CNH - wrong length
+BrazilianUtils::CNHUtils.valid?('123456789')
+# => false
+```
+
+**Parameters:**
+- `cnh` (String): CNH string (symbols will be ignored)
+
+**Returns:**
+- `Boolean`: `true` if CNH has a valid format, `false` otherwise
+
+**Validation Rules:**
+- Must contain exactly 11 digits after removing non-numeric characters
+- Cannot be a sequence of the same digit (e.g., "00000000000")
+- Must have valid verification digits (10th and 11th positions)
 
 ### CEP Utils
 
