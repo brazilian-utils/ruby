@@ -22,6 +22,10 @@ This library provides utilities for working with Brazilian-specific data formats
 - CNPJ formatting and symbol removal
 - Random CNPJ generation
 
+### Currency Utils
+- Brazilian Real (R$) currency formatting
+- Convert monetary values to text in Brazilian Portuguese
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -374,6 +378,141 @@ puts "Cleaned: #{clean}"
 # Validate cleaned CNPJ
 puts "Valid? #{BrazilianUtils::CNPJUtils.valid?(clean)}"
 # => true
+```
+
+### Currency Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/currency.py) implementation.
+
+#### Currency Formatting
+
+##### `format_currency(value)`
+
+Formats a numeric value as Brazilian currency (R$).
+
+```ruby
+require 'brazilian-utils/currency-utils'
+
+BrazilianUtils::CurrencyUtils.format_currency(1234.56)
+# => "R$ 1.234,56"
+
+BrazilianUtils::CurrencyUtils.format_currency(0)
+# => "R$ 0,00"
+
+BrazilianUtils::CurrencyUtils.format_currency(-9876.54)
+# => "R$ -9.876,54"
+
+BrazilianUtils::CurrencyUtils.format_currency(1234567.89)
+# => "R$ 1.234.567,89"
+
+BrazilianUtils::CurrencyUtils.format_currency("invalid")
+# => nil
+```
+
+**Parameters:**
+- `value` (Float, Integer, String, BigDecimal): The numeric value to format
+
+**Returns:**
+- `String`: Formatted currency string (e.g., "R$ 1.234,56")
+- `nil`: If the input is invalid
+
+**Features:**
+- Automatically adds thousands separator (`.`)
+- Uses comma (`,`) for decimal separator
+- Always displays 2 decimal places
+- Supports negative values
+- Handles very large numbers
+
+#### Money to Text Conversion
+
+##### `convert_real_to_text(amount)`
+
+Converts a monetary value in Brazilian Reais to textual representation in Portuguese.
+
+```ruby
+# Zero
+BrazilianUtils::CurrencyUtils.convert_real_to_text(0.00)
+# => "Zero reais"
+
+# Only reais
+BrazilianUtils::CurrencyUtils.convert_real_to_text(1.00)
+# => "Um real"
+
+BrazilianUtils::CurrencyUtils.convert_real_to_text(2.00)
+# => "Dois reais"
+
+BrazilianUtils::CurrencyUtils.convert_real_to_text(100.00)
+# => "Cem reais"
+
+# Only centavos
+BrazilianUtils::CurrencyUtils.convert_real_to_text(0.01)
+# => "Um centavo"
+
+BrazilianUtils::CurrencyUtils.convert_real_to_text(0.50)
+# => "Cinquenta centavos"
+
+# Reais and centavos
+BrazilianUtils::CurrencyUtils.convert_real_to_text(1.50)
+# => "Um real e cinquenta centavos"
+
+BrazilianUtils::CurrencyUtils.convert_real_to_text(1523.45)
+# => "Mil, quinhentos e vinte e três reais e quarenta e cinco centavos"
+
+# Large values
+BrazilianUtils::CurrencyUtils.convert_real_to_text(1_000_000.00)
+# => "Um milhão de reais"
+
+BrazilianUtils::CurrencyUtils.convert_real_to_text(1_000_000_000.00)
+# => "Um bilhão de reais"
+
+# Negative values
+BrazilianUtils::CurrencyUtils.convert_real_to_text(-10.50)
+# => "Menos dez reais e cinquenta centavos"
+
+# Invalid input
+BrazilianUtils::CurrencyUtils.convert_real_to_text("invalid")
+# => nil
+```
+
+**Parameters:**
+- `amount` (BigDecimal, Float, Integer, String): Monetary value to convert
+
+**Returns:**
+- `String`: Textual representation in Brazilian Portuguese
+- `nil`: If the input is invalid or exceeds limits
+
+**Important Notes:**
+- Values are rounded **down** to 2 decimal places
+- Maximum supported value is 1 quadrillion reais (1,000,000,000,000,000)
+- Negative values are prefixed with "Menos"
+- Grammatically correct Portuguese (singular "real" vs plural "reais", "centavo" vs "centavos")
+- Proper connectors for millions/billions ("milhão **de** reais")
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/currency-utils'
+
+# Format a price
+price = 1523.45
+formatted = BrazilianUtils::CurrencyUtils.format_currency(price)
+puts formatted
+# => "R$ 1.523,45"
+
+# Convert to text for a check/invoice
+text = BrazilianUtils::CurrencyUtils.convert_real_to_text(price)
+puts text
+# => "Mil, quinhentos e vinte e três reais e quarenta e cinco centavos"
+
+# Handle user input
+user_input = "2500.75"
+formatted = BrazilianUtils::CurrencyUtils.format_currency(user_input)
+text = BrazilianUtils::CurrencyUtils.convert_real_to_text(user_input)
+
+puts "Valor: #{formatted}"
+puts "Por extenso: #{text}"
+# => Valor: R$ 2.500,75
+# => Por extenso: Dois mil, quinhentos e setenta e cinco reais e setenta e cinco centavos
 ```
 
 ### CEP Utils
