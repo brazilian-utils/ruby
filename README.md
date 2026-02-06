@@ -10,7 +10,9 @@
 This library provides utilities for working with Brazilian-specific data formats:
 
 ### CPF Utils
-- CPF validation
+- CPF validation (Cadastro de Pessoas Físicas)
+- CPF formatting and symbol removal
+- Random CPF generation
 
 ### CNH Utils
 - CNH validation (Carteira Nacional de Habilitação)
@@ -51,10 +53,135 @@ $ gem install brazilian-utils
 
 ### CPF Utils
 
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/cpf.py) implementation.
+
+#### Formatting Functions
+
+##### `remove_symbols(dirty)` / `sieve(dirty)`
+
+Removes specific symbols from a CPF string (`.`, `-`).
+
 ```ruby
 require 'brazilian-utils/cpf-utils'
 
+BrazilianUtils::CPFUtils.remove_symbols('123.456.789-01')
+# => "12345678901"
+
+BrazilianUtils::CPFUtils.remove_symbols('987-654-321.01')
+# => "98765432101"
+```
+
+##### `format_cpf(cpf)`
+
+Formats a valid CPF string for visual display.
+
+```ruby
+BrazilianUtils::CPFUtils.format_cpf('82178537464')
+# => "821.785.374-64"
+
+BrazilianUtils::CPFUtils.format_cpf('55550207753')
+# => "555.502.077-53"
+
+BrazilianUtils::CPFUtils.format_cpf('12345678901')
+# => nil (invalid CPF)
+```
+
+##### `display(cpf)` (Legacy)
+
+Formats a numbers-only CPF string with visual aid symbols.
+
+```ruby
+BrazilianUtils::CPFUtils.display('12345678901')
+# => "123.456.789-01"
+```
+
+**Note:** `display` is provided for backward compatibility. Use `format_cpf` for new code.
+
+#### Validation Functions
+
+##### `valid?(cpf)` / `validate(cpf)`
+
+Validates a CPF by verifying its checksum digits.
+
+```ruby
+# Valid CPF
+BrazilianUtils::CPFUtils.valid?('82178537464')
+# => true
+
 BrazilianUtils::CPFUtils.valid?('41840660546')
+# => true
+
+# Invalid CPF - wrong checksum
+BrazilianUtils::CPFUtils.valid?('12345678901')
+# => false
+
+# Invalid CPF - all same digits
+BrazilianUtils::CPFUtils.valid?('00000000000')
+# => false
+
+# Invalid CPF - must be numbers only
+BrazilianUtils::CPFUtils.valid?('821.785.374-64')
+# => false
+```
+
+**Parameters:**
+- `cpf` (String): CPF string to validate (must be 11 digits, numbers only)
+
+**Returns:**
+- `Boolean`: `true` if the CPF is valid, `false` otherwise
+
+**Validation Rules:**
+- Must be exactly 11 digits
+- Cannot be a sequence of the same digit (e.g., "00000000000", "11111111111")
+- The last two digits must match the calculated checksum
+
+#### Generation Function
+
+##### `generate()`
+
+Generates a random valid CPF.
+
+```ruby
+BrazilianUtils::CPFUtils.generate
+# => "10895948109"
+
+BrazilianUtils::CPFUtils.generate
+# => "52837606502"
+```
+
+**Returns:**
+- `String`: A randomly generated valid 11-digit CPF
+
+**Note:** The generated CPF will always be valid and will not start with 0.
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/cpf-utils'
+
+# Generate a new CPF
+cpf = BrazilianUtils::CPFUtils.generate
+puts "Generated: #{cpf}"
+# => "82178537464"
+
+# Validate CPF
+if BrazilianUtils::CPFUtils.valid?(cpf)
+  puts "CPF is valid!"
+end
+
+# Format for display
+formatted = BrazilianUtils::CPFUtils.format_cpf(cpf)
+puts "Formatted: #{formatted}"
+# => "821.785.374-64"
+
+# Clean formatted CPF
+dirty_cpf = '821.785.374-64'
+clean = BrazilianUtils::CPFUtils.remove_symbols(dirty_cpf)
+puts "Cleaned: #{clean}"
+# => "82178537464"
+
+# Validate cleaned CPF
+puts "Valid? #{BrazilianUtils::CPFUtils.valid?(clean)}"
 # => true
 ```
 
