@@ -26,6 +26,10 @@ This library provides utilities for working with Brazilian-specific data formats
 - Brazilian Real (R$) currency formatting
 - Convert monetary values to text in Brazilian Portuguese
 
+### Date Utils
+- Check if a date is a Brazilian national or state holiday
+- Convert dates to text in Brazilian Portuguese
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -513,6 +517,207 @@ puts "Valor: #{formatted}"
 puts "Por extenso: #{text}"
 # => Valor: R$ 2.500,75
 # => Por extenso: Dois mil, quinhentos e setenta e cinco reais e setenta e cinco centavos
+```
+
+### Date Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/date_utils.py) implementation.
+
+#### Holiday Checking
+
+##### `is_holiday(target_date, uf = nil)`
+
+Checks if the given date is a national or state holiday in Brazil.
+
+```ruby
+require 'brazilian-utils/date-utils'
+
+# National holidays
+BrazilianUtils::DateUtils.is_holiday(Date.new(2024, 1, 1))
+# => true (New Year)
+
+BrazilianUtils::DateUtils.is_holiday(Date.new(2024, 12, 25))
+# => true (Christmas)
+
+BrazilianUtils::DateUtils.is_holiday(Date.new(2024, 9, 7))
+# => true (Independence Day)
+
+# Regular day
+BrazilianUtils::DateUtils.is_holiday(Date.new(2024, 3, 15))
+# => false
+
+# State-specific holidays
+BrazilianUtils::DateUtils.is_holiday(Date.new(2024, 7, 9), 'SP')
+# => true (Revolução Constitucionalista - São Paulo state holiday)
+
+BrazilianUtils::DateUtils.is_holiday(Date.new(2024, 7, 9), 'RJ')
+# => false (Not a holiday in Rio de Janeiro)
+
+BrazilianUtils::DateUtils.is_holiday(Date.new(2024, 11, 20), 'RJ')
+# => true (Consciência Negra - Rio de Janeiro state holiday)
+
+# Works with different date types
+BrazilianUtils::DateUtils.is_holiday(DateTime.new(2024, 12, 25, 10, 30))
+# => true
+
+BrazilianUtils::DateUtils.is_holiday(Time.new(2024, 12, 25))
+# => true
+
+# Invalid inputs
+BrazilianUtils::DateUtils.is_holiday('2024-01-01')
+# => nil (not a Date object)
+
+BrazilianUtils::DateUtils.is_holiday(Date.new(2024, 1, 1), 'XX')
+# => nil (invalid UF code)
+```
+
+**Parameters:**
+- `target_date` (Date, DateTime, Time): The date to check
+- `uf` (String, nil): Optional state abbreviation (UF) for state-specific holidays
+
+**Returns:**
+- `true`: If the date is a holiday
+- `false`: If the date is not a holiday
+- `nil`: If the date is invalid or UF is invalid
+
+**National Holidays:**
+- January 1: Ano Novo (New Year)
+- April 21: Tiradentes
+- May 1: Dia do Trabalho (Labor Day)
+- September 7: Independência do Brasil (Independence Day)
+- October 12: Nossa Senhora Aparecida
+- November 2: Finados (All Souls Day)
+- November 15: Proclamação da República (Proclamation of the Republic)
+- December 25: Natal (Christmas)
+
+**State Holidays:**
+Each Brazilian state has specific holidays. Some examples:
+- São Paulo (SP): July 9 - Revolução Constitucionalista de 1932
+- Rio de Janeiro (RJ): November 20 - Dia da Consciência Negra
+- Bahia (BA): July 2 - Independência da Bahia
+
+**Important Notes:**
+- This implementation only includes fixed-date holidays
+- Movable holidays (like Carnival, Easter) are not included in this basic implementation
+- Does not handle municipal holidays
+
+#### Date to Text Conversion
+
+##### `convert_date_to_text(date)`
+
+Converts a date in Brazilian format (dd/mm/yyyy) to its textual representation in Portuguese.
+
+```ruby
+require 'brazilian-utils/date-utils'
+
+# Regular dates
+BrazilianUtils::DateUtils.convert_date_to_text('15/03/2024')
+# => "Quinze de março de dois mil e vinte e quatro"
+
+BrazilianUtils::DateUtils.convert_date_to_text('25/12/2023')
+# => "Vinte e cinco de dezembro de dois mil e vinte e três"
+
+# First day of month (special case)
+BrazilianUtils::DateUtils.convert_date_to_text('01/01/2024')
+# => "Primeiro de janeiro de dois mil e vinte e quatro"
+
+BrazilianUtils::DateUtils.convert_date_to_text('01/05/2024')
+# => "Primeiro de maio de dois mil e vinte e quatro"
+
+# All months
+BrazilianUtils::DateUtils.convert_date_to_text('15/02/2024')
+# => "Quinze de fevereiro de dois mil e vinte e quatro"
+
+BrazilianUtils::DateUtils.convert_date_to_text('21/04/2024')
+# => "Vinte e um de abril de dois mil e vinte e quatro"
+
+BrazilianUtils::DateUtils.convert_date_to_text('10/06/2024')
+# => "Dez de junho de dois mil e vinte e quatro"
+
+BrazilianUtils::DateUtils.convert_date_to_text('09/07/2024')
+# => "Nove de julho de dois mil e vinte e quatro"
+
+BrazilianUtils::DateUtils.convert_date_to_text('15/08/2024')
+# => "Quinze de agosto de dois mil e vinte e quatro"
+
+BrazilianUtils::DateUtils.convert_date_to_text('07/09/2024')
+# => "Sete de setembro de dois mil e vinte e quatro"
+
+BrazilianUtils::DateUtils.convert_date_to_text('12/10/2024')
+# => "Doze de outubro de dois mil e vinte e quatro"
+
+BrazilianUtils::DateUtils.convert_date_to_text('15/11/2024')
+# => "Quinze de novembro de dois mil e vinte e quatro"
+
+# Leap year
+BrazilianUtils::DateUtils.convert_date_to_text('29/02/2024')
+# => "Vinte e nove de fevereiro de dois mil e vinte e quatro"
+
+# Invalid dates
+BrazilianUtils::DateUtils.convert_date_to_text('32/01/2024')
+# => nil (invalid day)
+
+BrazilianUtils::DateUtils.convert_date_to_text('29/02/2023')
+# => nil (not a leap year)
+
+BrazilianUtils::DateUtils.convert_date_to_text('01-01-2024')
+# => nil (wrong format - must use /)
+
+BrazilianUtils::DateUtils.convert_date_to_text('2024/01/01')
+# => nil (wrong format - must be dd/mm/yyyy)
+```
+
+**Parameters:**
+- `date` (String): Date string in format dd/mm/yyyy
+
+**Returns:**
+- `String`: Date written out in Brazilian Portuguese
+- `nil`: If the date format is invalid or the date doesn't exist
+
+**Features:**
+- Validates date format with regex pattern
+- Checks if date actually exists (handles leap years, month lengths)
+- Special handling for day 1 ("Primeiro" instead of "Um")
+- Properly formatted Portuguese number words
+- Supports all 12 months with Portuguese names
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/date-utils'
+
+# Check if today is a holiday
+today = Date.today
+if BrazilianUtils::DateUtils.is_holiday(today)
+  puts "Hoje é feriado nacional!"
+elsif BrazilianUtils::DateUtils.is_holiday(today, 'SP')
+  puts "Hoje é feriado em São Paulo!"
+else
+  puts "Hoje não é feriado"
+end
+
+# Check specific holidays
+christmas = Date.new(2024, 12, 25)
+puts "Christmas is a holiday: #{BrazilianUtils::DateUtils.is_holiday(christmas)}"
+# => Christmas is a holiday: true
+
+# Convert dates to text
+date_str = '07/09/2024'
+text = BrazilianUtils::DateUtils.convert_date_to_text(date_str)
+puts "#{date_str} por extenso: #{text}"
+# => 07/09/2024 por extenso: Sete de setembro de dois mil e vinte e quatro
+
+# Format dates for documents
+document_date = '15/03/2024'
+formatted_date = BrazilianUtils::DateUtils.convert_date_to_text(document_date)
+puts "São Paulo, #{formatted_date}"
+# => São Paulo, Quinze de março de dois mil e vinte e quatro
+
+# Check holidays for different states
+holiday_date = Date.new(2024, 7, 9)
+puts "SP holiday: #{BrazilianUtils::DateUtils.is_holiday(holiday_date, 'SP')}"  # true
+puts "RJ holiday: #{BrazilianUtils::DateUtils.is_holiday(holiday_date, 'RJ')}"  # false
+puts "MG holiday: #{BrazilianUtils::DateUtils.is_holiday(holiday_date, 'MG')}"  # false
 ```
 
 ### CEP Utils
