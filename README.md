@@ -50,6 +50,13 @@ This library provides utilities for working with Brazilian-specific data formats
 - Generate random license plates
 - Detect plate format type
 
+### Phone Utils
+- Validate Brazilian phone numbers (mobile and landline)
+- Format phone numbers with area code and separator
+- Remove symbols from phone numbers
+- Generate random phone numbers
+- Remove international dialing code
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -1810,6 +1817,404 @@ end
 | Introduced | Original format | 2018 (Mercosul standard) |
 | Conversion | Can convert to Mercosul | Cannot convert to old format |
 | Countries | Brazil only | Brazil, Argentina, Paraguay, Uruguay, Venezuela |
+
+### Phone Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/phone.py) implementation.
+
+Utilities for formatting, validating, and generating Brazilian phone numbers. Brazilian phone numbers come in two types:
+
+1. **Mobile (Celular)**: 11 digits - DDD + 9 + 8 digits, e.g., "11994029275"
+2. **Landline (Fixo)**: 10 digits - DDD + [2-5] + 7 digits, e.g., "1635014415"
+
+**DDD (Discagem Direta à Distância)** is the area code, consisting of 2 digits ranging from 11 to 99.
+- Mobile numbers always have **9** as the 3rd digit (after DDD)
+- Landline numbers have **2, 3, 4, or 5** as the 3rd digit (after DDD)
+
+#### Formatting
+
+##### `format_phone(phone)` / `format(phone)`
+
+Formats a Brazilian phone number into the standard pattern (DD)NNNNN-NNNN.
+
+```ruby
+require 'brazilian-utils/phone-utils'
+
+# Format mobile number
+BrazilianUtils::PhoneUtils.format_phone('11994029275')
+# => "(11)99402-9275"
+
+BrazilianUtils::PhoneUtils.format_phone('21987654321')
+# => "(21)98765-4321"
+
+# Format landline number
+BrazilianUtils::PhoneUtils.format_phone('1635014415')
+# => "(16)3501-4415"
+
+BrazilianUtils::PhoneUtils.format_phone('1122334455')
+# => "(11)2233-4455"
+
+# Using the alias
+BrazilianUtils::PhoneUtils.format('85912345678')
+# => "(85)91234-5678"
+
+# Invalid numbers
+BrazilianUtils::PhoneUtils.format_phone('333333')
+# => nil
+
+BrazilianUtils::PhoneUtils.format_phone('123456')
+# => nil (too short)
+```
+
+**Parameters:**
+- `phone` (String): A phone number string (digits only, no symbols)
+
+**Returns:**
+- `String`: The formatted phone number (DD)NNNNN-NNNN
+- `nil`: If the phone number is invalid
+
+**Format Pattern:**
+- Mobile: (DD)9NNNN-NNNN (11 digits)
+- Landline: (DD)NNNN-NNNN (10 digits)
+
+#### Validation
+
+##### `is_valid(phone_number, type = nil)` / `valid?(phone_number, type = nil)`
+
+Validates a Brazilian phone number.
+
+```ruby
+# Validate any type (default)
+BrazilianUtils::PhoneUtils.is_valid('11994029275')
+# => true (mobile)
+
+BrazilianUtils::PhoneUtils.is_valid('1635014415')
+# => true (landline)
+
+BrazilianUtils::PhoneUtils.is_valid('123456')
+# => false
+
+# Validate specific type
+BrazilianUtils::PhoneUtils.is_valid('11994029275', :mobile)
+# => true
+
+BrazilianUtils::PhoneUtils.is_valid('1635014415', :mobile)
+# => false (it's a landline)
+
+BrazilianUtils::PhoneUtils.is_valid('1635014415', :landline)
+# => true
+
+BrazilianUtils::PhoneUtils.is_valid('11994029275', :landline)
+# => false (it's a mobile)
+
+# Using string type
+BrazilianUtils::PhoneUtils.is_valid('11994029275', 'mobile')
+# => true
+
+BrazilianUtils::PhoneUtils.is_valid('1635014415', 'landline')
+# => true
+
+# Using the alias
+BrazilianUtils::PhoneUtils.valid?('21987654321')
+# => true
+
+# Invalid numbers
+BrazilianUtils::PhoneUtils.is_valid('01987654321')
+# => false (DDD cannot start with 0)
+
+BrazilianUtils::PhoneUtils.is_valid('1166778899')
+# => false (landline cannot have 6 after DDD)
+
+BrazilianUtils::PhoneUtils.is_valid('(11)99402-9275')
+# => false (has symbols, use remove_symbols first)
+```
+
+**Parameters:**
+- `phone_number` (String): The phone number to validate (digits only, no country code)
+- `type` (Symbol, String, nil): Optional type specification
+  - `:mobile` or `"mobile"`: Validate as mobile only
+  - `:landline` or `"landline"`: Validate as landline only
+  - `nil`: Validate as either type (default)
+
+**Returns:**
+- `true`: If the phone number is valid
+- `false`: If the phone number is invalid
+
+**Validation Rules:**
+
+**Mobile Numbers (11 digits):**
+- Pattern: [1-9][1-9][9]NNNNNNNN
+- First 2 digits (DDD): Both must be 1-9
+- 3rd digit: Must be 9
+- Remaining 8 digits: Any digit 0-9
+
+**Landline Numbers (10 digits):**
+- Pattern: [1-9][1-9][2-5]NNNNNNN
+- First 2 digits (DDD): Both must be 1-9
+- 3rd digit: Must be 2, 3, 4, or 5
+- Remaining 7 digits: Any digit 0-9
+
+**Important Notes:**
+- Does not verify if the phone number actually exists
+- Only validates format and structure
+- Does not accept phone numbers with symbols (use `remove_symbols` first)
+- Does not accept country code (use `remove_international_dialing_code` first)
+
+#### Symbol Removal
+
+##### `remove_symbols_phone(phone_number)` / `remove_symbols(phone_number)` / `sieve(phone_number)`
+
+Removes common symbols from a phone number string.
+
+Removes: `(`, `)`, `-`, `+`, and spaces
+
+```ruby
+# Remove all symbols
+BrazilianUtils::PhoneUtils.remove_symbols_phone('(11)99402-9275')
+# => "11994029275"
+
+BrazilianUtils::PhoneUtils.remove_symbols_phone('+55 (11) 99402-9275')
+# => "5511994029275"
+
+BrazilianUtils::PhoneUtils.remove_symbols_phone('(16) 3501-4415')
+# => "1635014415"
+
+# Using the alias
+BrazilianUtils::PhoneUtils.remove_symbols('11-99402-9275')
+# => "11994029275"
+
+BrazilianUtils::PhoneUtils.sieve('+5511994029275')
+# => "5511994029275"
+
+# No symbols to remove
+BrazilianUtils::PhoneUtils.remove_symbols_phone('11994029275')
+# => "11994029275"
+```
+
+**Parameters:**
+- `phone_number` (String): A phone number string with symbols
+
+**Returns:**
+- `String`: The phone number with symbols removed
+
+#### International Code Removal
+
+##### `remove_international_dialing_code(phone_number)`
+
+Removes the international dialing code (+55 or 55) from a phone number.
+
+Only removes the code if the resulting number would have more than 11 digits.
+
+```ruby
+# Remove country code
+BrazilianUtils::PhoneUtils.remove_international_dialing_code('5511994029275')
+# => "11994029275"
+
+BrazilianUtils::PhoneUtils.remove_international_dialing_code('+5511994029275')
+# => "+11994029275" (removes only "55", keeps "+")
+
+BrazilianUtils::PhoneUtils.remove_international_dialing_code('551635014415')
+# => "1635014415"
+
+# No international code
+BrazilianUtils::PhoneUtils.remove_international_dialing_code('11994029275')
+# => "11994029275" (unchanged)
+
+BrazilianUtils::PhoneUtils.remove_international_dialing_code('1635014415')
+# => "1635014415" (unchanged)
+
+# Removes only first occurrence
+BrazilianUtils::PhoneUtils.remove_international_dialing_code('555511994029275')
+# => "5511994029275"
+```
+
+**Parameters:**
+- `phone_number` (String): A phone number with or without international code
+
+**Returns:**
+- `String`: The phone number without international code
+
+**Important Notes:**
+- Only removes if the number length (without spaces) is > 11 digits
+- Removes only the first occurrence of "55"
+- Keeps the "+" sign if present in format "+55"
+- Does not remove if the resulting number would be 11 digits or less
+
+#### Generation
+
+##### `generate(type = nil)`
+
+Generates a valid and random phone number.
+
+```ruby
+# Generate random type (mobile or landline)
+BrazilianUtils::PhoneUtils.generate
+# => "2234451215" (example, actual value is random)
+
+BrazilianUtils::PhoneUtils.generate
+# => "11987654321" (example)
+
+# Generate mobile explicitly
+BrazilianUtils::PhoneUtils.generate(:mobile)
+# => "11999115895" (example)
+
+BrazilianUtils::PhoneUtils.generate(:mobile)
+# => "21987654321" (example)
+
+# Generate landline explicitly
+BrazilianUtils::PhoneUtils.generate(:landline)
+# => "1635317900" (example)
+
+BrazilianUtils::PhoneUtils.generate(:landline)
+# => "1122334455" (example)
+
+# Using string type
+BrazilianUtils::PhoneUtils.generate('mobile')
+# => "85912345678" (example)
+
+BrazilianUtils::PhoneUtils.generate('landline')
+# => "4733221100" (example)
+```
+
+**Parameters:**
+- `type` (Symbol, String, nil): Optional type specification
+  - `:mobile` or `"mobile"`: Generate mobile number
+  - `:landline` or `"landline"`: Generate landline number
+  - `nil`: Generate random type (default)
+
+**Returns:**
+- `String`: A randomly generated valid phone number
+
+**Generated Numbers:**
+- Always valid (match validation patterns)
+- Mobile: 11 digits (DD + 9 + 8 random digits)
+- Landline: 10 digits (DD + [2-5] + 7 random digits)
+- DDD: Both digits are 1-9
+- Can be formatted and validated immediately
+- Do not correspond to real phone numbers
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/phone-utils'
+
+include BrazilianUtils::PhoneUtils
+
+# Scenario 1: Process user input with international code
+user_input = '+55 (11) 99402-9275'
+
+# Step 1: Remove symbols
+clean = remove_symbols(user_input)
+puts "Clean: #{clean}"
+# => Clean: 5511994029275
+
+# Step 2: Remove international code
+without_code = remove_international_dialing_code(clean)
+puts "Without code: #{without_code}"
+# => Without code: 11994029275
+
+# Step 3: Validate
+if is_valid(without_code)
+  puts "Valid phone number!"
+  
+  # Check type
+  if is_valid(without_code, :mobile)
+    puts "Type: Mobile"
+  elsif is_valid(without_code, :landline)
+    puts "Type: Landline"
+  end
+  
+  # Step 4: Format for display
+  formatted = format_phone(without_code)
+  puts "Formatted: #{formatted}"
+  # => Formatted: (11)99402-9275
+else
+  puts "Invalid phone number"
+end
+
+# Scenario 2: Generate test data
+puts "\nGenerating test phone numbers:"
+
+# Generate 5 mobile numbers
+5.times do
+  mobile = generate(:mobile)
+  formatted = format(mobile)
+  puts "  Mobile: #{formatted} (#{mobile})"
+end
+# => Mobile: (11)99402-9275 (11994029275)
+# => Mobile: (21)98765-4321 (21987654321)
+# => ...
+
+# Generate 5 landline numbers
+5.times do
+  landline = generate(:landline)
+  formatted = format(landline)
+  puts "  Landline: #{formatted} (#{landline})"
+end
+# => Landline: (16)3501-4415 (1635014415)
+# => Landline: (11)2233-4455 (1122334455)
+# => ...
+
+# Scenario 3: Validate phone list
+phones = [
+  '11994029275',
+  '1635014415',
+  '(21)98765-4321',
+  '123456',
+  '01987654321'
+]
+
+puts "\nValidating phone list:"
+phones.each do |phone|
+  # Clean if needed
+  clean = remove_symbols(phone)
+  
+  if valid?(clean)
+    type = valid?(clean, :mobile) ? 'Mobile' : 'Landline'
+    formatted = format(clean)
+    puts "  ✓ #{formatted} [#{type}]"
+  else
+    puts "  ✗ #{phone} [INVALID]"
+  end
+end
+# => ✓ (11)99402-9275 [Mobile]
+# => ✓ (16)3501-4415 [Landline]
+# => ✓ (21)98765-4321 [Mobile]
+# => ✗ 123456 [INVALID]
+# => ✗ 01987654321 [INVALID]
+```
+
+**Use Cases:**
+- Validate phone numbers in registration forms
+- Format phone numbers for display
+- Clean user input (remove symbols, international codes)
+- Generate test data for phone systems
+- Distinguish between mobile and landline numbers
+- Normalize phone numbers for storage
+- Validate specific phone types (e.g., only accept mobile)
+
+**Phone Type Comparison:**
+
+| Aspect | Mobile (Celular) | Landline (Fixo) |
+|--------|------------------|------------------|
+| Total Digits | 11 | 10 |
+| Pattern | (DD)9NNNN-NNNN | (DD)NNNN-NNNN |
+| DDD | 2 digits (11-99) | 2 digits (11-99) |
+| 3rd Digit | Always 9 | Always 2, 3, 4, or 5 |
+| Example | (11)99402-9275 | (16)3501-4415 |
+| Format | 11994029275 | 1635014415 |
+
+**Common DDD (Area Codes):**
+- 11: São Paulo (SP)
+- 21: Rio de Janeiro (RJ)
+- 85: Fortaleza (CE)
+- 71: Salvador (BA)
+- 47: Joinville/Blumenau (SC)
+- 51: Porto Alegre (RS)
+- 61: Brasília (DF)
+- 31: Belo Horizonte (MG)
+- 41: Curitiba (PR)
+- 81: Recife (PE)
 
 ### CEP Utils
 
