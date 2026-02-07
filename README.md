@@ -63,6 +63,9 @@ This library provides utilities for working with Brazilian-specific data formats
 - Remove formatting symbols
 - Generate random valid PIS numbers
 
+### RENAVAM Utils
+- Validate RENAVAM numbers (Registro Nacional de Veículos Automotores)
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -2528,6 +2531,201 @@ Actually, for a valid PIS, the calculation ensures the last digit matches.
 - Used for employment records, FGTS (workers' fund), and social benefits
 - Also known as PIS/PASEP depending on employment sector
 - Required for all formal workers in Brazil
+
+### RENAVAM Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/renavam.py) implementation.
+
+Utilities for validating Brazilian RENAVAM numbers. RENAVAM (Registro Nacional de Veículos Automotores) is an 11-digit identification number for motor vehicles in Brazil.
+
+The last digit is a verification digit calculated from the first 10 digits using a weighted algorithm.
+
+#### Validation
+
+##### `is_valid_renavam(renavam)` / `is_valid(renavam)` / `valid?(renavam)`
+
+Validates the Brazilian vehicle registration number (RENAVAM).
+
+A valid RENAVAM consists of exactly 11 digits, with the last digit as a verification digit calculated from the previous 10 digits.
+
+```ruby
+require 'brazilian-utils/renavam-utils'
+
+# Valid RENAVAM
+BrazilianUtils::RENAVAMUtils.is_valid_renavam('86769597308')
+# => true
+
+BrazilianUtils::RENAVAMUtils.is_valid_renavam('12345678901')
+# => false (wrong checksum)
+
+# Using the aliases
+BrazilianUtils::RENAVAMUtils.is_valid('86769597308')
+# => true
+
+BrazilianUtils::RENAVAMUtils.valid?('86769597308')
+# => true
+
+# Invalid formats
+BrazilianUtils::RENAVAMUtils.is_valid_renavam('1234567890a')
+# => false (contains letter)
+
+BrazilianUtils::RENAVAMUtils.is_valid_renavam('12345678 901')
+# => false (contains space)
+
+BrazilianUtils::RENAVAMUtils.is_valid_renavam('12345678')
+# => false (wrong length)
+
+BrazilianUtils::RENAVAMUtils.is_valid_renavam('')
+# => false (empty)
+
+BrazilianUtils::RENAVAMUtils.is_valid_renavam('11111111111')
+# => false (all same digits)
+```
+
+**Parameters:**
+- `renavam` (String): The RENAVAM string to be validated (11 digits)
+
+**Returns:**
+- `true`: If the RENAVAM is valid
+- `false`: If the RENAVAM is invalid
+
+**Validation Checks:**
+1. **Type**: Must be a string
+2. **Length**: Must be exactly 11 digits
+3. **Format**: Must contain only digits (0-9)
+4. **Pattern**: Cannot be all the same digit (e.g., "11111111111")
+5. **Checksum**: Last digit must match calculated verification digit
+
+**Verification Digit Algorithm:**
+
+The verification digit (last digit) is calculated using the following algorithm:
+
+1. Take the first 10 digits
+2. Reverse the order
+3. Multiply each digit by corresponding weight: [2, 3, 4, 5, 6, 7, 8, 9, 2, 3]
+4. Sum all products
+5. Calculate: 11 - (sum % 11)
+6. If result >= 10, use 0 as the verification digit
+7. Otherwise, use the result as the verification digit
+
+**Example Calculation:**
+
+For RENAVAM "86769597308":
+```
+Base digits: 8 6 7 6 9 5 9 7 3 0
+Reversed:    0 3 7 9 5 9 6 7 6 8
+Weights:     2 3 4 5 6 7 8 9 2 3
+Products:    0 9 28 45 30 63 48 63 12 24
+
+Sum: 0 + 9 + 28 + 45 + 30 + 63 + 48 + 63 + 12 + 24 = 322
+322 % 11 = 3
+11 - 3 = 8
+
+Verification digit: 8
+Complete RENAVAM: 86769597308 ✓
+```
+
+**Important Notes:**
+- Does not verify if the RENAVAM actually exists or is registered to a real vehicle
+- Only validates format and checksum
+- RENAVAM must be provided as digits only (no symbols)
+- Cannot be all the same digit (e.g., "00000000000")
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/renavam-utils'
+
+include BrazilianUtils::RENAVAMUtils
+
+# Validate user input
+user_input = '86769597308'
+
+if is_valid_renavam(user_input)
+  puts "Valid RENAVAM!"
+  puts "This vehicle registration is valid."
+else
+  puts "Invalid RENAVAM"
+  puts "Please check the number and try again."
+end
+# => Valid RENAVAM!
+# => This vehicle registration is valid.
+
+# Validate multiple RENAVAMs
+renavams = [
+  '86769597308',
+  '12345678901',
+  '11111111111',
+  '1234567890a',
+  '12345678'
+]
+
+puts "\nValidating RENAVAM list:"
+renavams.each do |renavam|
+  if valid?(renavam)
+    puts "  ✓ #{renavam}"
+  else
+    puts "  ✗ #{renavam} [INVALID]"
+  end
+end
+# => ✓ 86769597308
+# => ✗ 12345678901 [INVALID]
+# => ✗ 11111111111 [INVALID]
+# => ✗ 1234567890a [INVALID]
+# => ✗ 12345678 [INVALID]
+
+# Batch validation
+valid_count = 0
+invalid_count = 0
+
+renavams.each do |renavam|
+  if is_valid(renavam)
+    valid_count += 1
+  else
+    invalid_count += 1
+  end
+end
+
+puts "\nSummary:"
+puts "  Valid: #{valid_count}"
+puts "  Invalid: #{invalid_count}"
+puts "  Total: #{renavams.length}"
+# => Valid: 1
+# => Invalid: 4
+# => Total: 5
+```
+
+**Use Cases:**
+- Validate vehicle registration numbers in transportation systems
+- Verify RENAVAM before processing vehicle transactions
+- Validate input in vehicle registration forms
+- Check RENAVAM format in databases and APIs
+- Ensure data integrity in vehicle management systems
+
+**RENAVAM Structure:**
+
+```
+86769597308
+││││││││││└─ Verification digit (calculated, position 11)
+└──────────── Base number (first 10 digits)
+
+Total: 11 digits
+```
+
+**Related Information:**
+- RENAVAM was introduced in 1990 by DENATRAN (Brazilian National Traffic Department)
+- Used for vehicle identification in traffic fines, licensing, and registration
+- Different from license plate number (placa)
+- Found on vehicle registration certificate (CRLV - Certificado de Registro e Licenciamento de Veículo)
+- Required for all motor vehicles in Brazil
+
+**Weights Reference:**
+
+The algorithm uses the following weights for the first 10 digits (in reverse order):
+```
+Position (reversed): 1  2  3  4  5  6  7  8  9  10
+Weight:              2  3  4  5  6  7  8  9  2  3
+```
 
 ### CEP Utils
 
