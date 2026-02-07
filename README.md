@@ -30,6 +30,9 @@ This library provides utilities for working with Brazilian-specific data formats
 - Check if a date is a Brazilian national or state holiday
 - Convert dates to text in Brazilian Portuguese
 
+### Email Utils
+- Email address validation following RFC 5322 specifications
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -718,6 +721,150 @@ holiday_date = Date.new(2024, 7, 9)
 puts "SP holiday: #{BrazilianUtils::DateUtils.is_holiday(holiday_date, 'SP')}"  # true
 puts "RJ holiday: #{BrazilianUtils::DateUtils.is_holiday(holiday_date, 'RJ')}"  # false
 puts "MG holiday: #{BrazilianUtils::DateUtils.is_holiday(holiday_date, 'MG')}"  # false
+```
+
+### Email Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/email.py) implementation.
+
+#### Email Validation
+
+##### `is_valid(email)` / `valid?(email)`
+
+Checks if a string corresponds to a valid email address following RFC 5322 specifications.
+
+```ruby
+require 'brazilian-utils/email-utils'
+
+# Valid email addresses
+BrazilianUtils::EmailUtils.is_valid('brutils@brutils.com')
+# => true
+
+BrazilianUtils::EmailUtils.is_valid('user.name@example.com')
+# => true
+
+BrazilianUtils::EmailUtils.is_valid('user+tag@example.co.uk')
+# => true
+
+BrazilianUtils::EmailUtils.is_valid('user_123@test-domain.com')
+# => true
+
+BrazilianUtils::EmailUtils.is_valid('contact@company.com.br')
+# => true
+
+# Invalid email addresses
+BrazilianUtils::EmailUtils.is_valid('invalid-email@brutils')
+# => false (no TLD)
+
+BrazilianUtils::EmailUtils.is_valid('.user@example.com')
+# => false (starts with dot)
+
+BrazilianUtils::EmailUtils.is_valid('user@')
+# => false (no domain)
+
+BrazilianUtils::EmailUtils.is_valid('@example.com')
+# => false (no local part)
+
+BrazilianUtils::EmailUtils.is_valid('user name@example.com')
+# => false (space not allowed)
+
+BrazilianUtils::EmailUtils.is_valid('user@example.c')
+# => false (TLD too short)
+
+# Non-string inputs
+BrazilianUtils::EmailUtils.is_valid(nil)
+# => false
+
+BrazilianUtils::EmailUtils.is_valid(123)
+# => false
+
+# Using the alias
+BrazilianUtils::EmailUtils.valid?('user@example.com')
+# => true
+```
+
+**Parameters:**
+- `email` (String): The input string to be checked
+
+**Returns:**
+- `true`: If the email is valid according to RFC 5322
+- `false`: If the email is invalid or not a string
+
+**Validation Rules (RFC 5322):**
+- Local part (before @) cannot start with a dot
+- Local part can contain: letters, numbers, dots, underscores, percent, plus, minus
+- Must have exactly one @ symbol
+- Domain can contain: letters, numbers, dots, hyphens
+- Must have at least one dot in domain
+- TLD (top-level domain) must be at least 2 characters and only letters
+- No spaces or special characters outside the allowed set
+
+**Allowed Characters:**
+- **Local part**: `a-z A-Z 0-9 . _ % + -`
+- **Domain**: `a-z A-Z 0-9 . -`
+- **TLD**: `a-z A-Z` (minimum 2 characters)
+
+**Important Notes:**
+- The validation follows RFC 5322 specifications
+- Case-insensitive (accepts both uppercase and lowercase)
+- Rejects emails starting with a dot
+- Rejects consecutive dots in local part
+- TLD must be at least 2 alphabetic characters
+- Accepts subdomains (e.g., mail.example.com)
+- Accepts compound TLDs (e.g., .co.uk, .com.br)
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/email-utils'
+
+# Validate user input
+user_email = 'contact@brutils.com.br'
+
+if BrazilianUtils::EmailUtils.valid?(user_email)
+  puts "Email válido: #{user_email}"
+  # Proceed with sending email or storing in database
+else
+  puts "Email inválido: #{user_email}"
+  # Show error message to user
+end
+
+# Batch validation
+emails = [
+  'john.doe@gmail.com',
+  'invalid@domain',
+  'jane+newsletter@example.com',
+  '@incomplete.com',
+  'corporate@company.com.br'
+]
+
+valid_emails = emails.select { |email| BrazilianUtils::EmailUtils.valid?(email) }
+puts "Valid emails: #{valid_emails.join(', ')}"
+# => Valid emails: john.doe@gmail.com, jane+newsletter@example.com, corporate@company.com.br
+
+# Form validation example
+def validate_contact_form(name, email, message)
+  errors = []
+  
+  errors << "Name is required" if name.nil? || name.empty?
+  errors << "Email is required" if email.nil? || email.empty?
+  errors << "Invalid email format" unless BrazilianUtils::EmailUtils.valid?(email)
+  errors << "Message is required" if message.nil? || message.empty?
+  
+  if errors.empty?
+    { valid: true, message: "Form is valid" }
+  else
+    { valid: false, errors: errors }
+  end
+end
+
+result = validate_contact_form('João', 'joao@example.com', 'Hello!')
+puts result
+# => {:valid=>true, :message=>"Form is valid"}
+
+result = validate_contact_form('Maria', 'invalid-email', 'Hi!')
+puts result
+# => {:valid=>false, :errors=>["Invalid email format"]}
 ```
 
 ### CEP Utils
