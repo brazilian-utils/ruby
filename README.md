@@ -66,6 +66,12 @@ This library provides utilities for working with Brazilian-specific data formats
 ### RENAVAM Utils
 - Validate RENAVAM numbers (Registro Nacional de Veículos Automotores)
 
+### Voter ID Utils
+- Validate Brazilian voter ID (Título de Eleitor)
+- Format voter ID with spaces
+- Generate random valid voter IDs for any state
+- Support for 12 and 13-digit voter IDs (SP and MG edge cases)
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -2726,6 +2732,295 @@ The algorithm uses the following weights for the first 10 digits (in reverse ord
 Position (reversed): 1  2  3  4  5  6  7  8  9  10
 Weight:              2  3  4  5  6  7  8  9  2  3
 ```
+
+### Voter ID Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/voter_id.py) implementation.
+
+Utilities for validating, formatting, and generating Brazilian voter IDs (Título de Eleitor). The Voter ID is a document that proves voter registration and is required for voting in Brazil.
+
+A Voter ID consists of:
+- **Sequential number**: 8 digits (or 9 for some SP and MG cases)
+- **Federative union**: 2 digits representing the state (01-28)
+- **Verification digits**: 2 digits calculated from the sequential number and state code
+
+#### Validation
+
+##### `is_valid_voter_id(voter_id)` / `valid_voter_id?(voter_id)`
+
+Validates a Brazilian voter ID number.
+
+```ruby
+require 'brazilian-utils/voter-id-utils'
+
+# Valid voter IDs
+BrazilianUtils::VoterIdUtils.is_valid_voter_id('690847092828')
+# => true
+
+BrazilianUtils::VoterIdUtils.is_valid_voter_id('163204010922')
+# => true
+
+# Using the alias
+BrazilianUtils::VoterIdUtils.valid_voter_id?('690847092828')
+# => true
+
+# Invalid voter IDs
+BrazilianUtils::VoterIdUtils.is_valid_voter_id('123456789012')
+# => false (invalid verification digits)
+
+BrazilianUtils::VoterIdUtils.is_valid_voter_id('690847092A28')
+# => false (contains non-digit)
+
+BrazilianUtils::VoterIdUtils.is_valid_voter_id('123')
+# => false (wrong length)
+```
+
+**Parameters:**
+- `voter_id` (String): The voter ID to validate (12 or 13 digits)
+
+**Returns:**
+- `true`: If the voter ID is valid
+- `false`: If the voter ID is invalid
+
+**Validation Checks:**
+1. **Type**: Must be a string
+2. **Format**: Must contain only digits
+3. **Length**: Must be 12 digits (or 13 for SP/MG edge cases)
+4. **Federative Union**: Must be between 01 and 28
+5. **Verification Digits**: Both digits must match calculated values
+
+#### Formatting
+
+##### `format_voter_id(voter_id)` / `format(voter_id)`
+
+Formats a voter ID with visual spaces for display.
+
+```ruby
+require 'brazilian-utils/voter-id-utils'
+
+# Format valid voter IDs
+BrazilianUtils::VoterIdUtils.format_voter_id('690847092828')
+# => "6908 4709 28 28"
+
+BrazilianUtils::VoterIdUtils.format_voter_id('163204010922')
+# => "1632 0401 09 22"
+
+# Using the alias
+BrazilianUtils::VoterIdUtils.format('000000000191')
+# => "0000 0000 01 91"
+
+# Returns nil for invalid voter IDs
+BrazilianUtils::VoterIdUtils.format_voter_id('123')
+# => nil
+
+BrazilianUtils::VoterIdUtils.format_voter_id('123456789012')
+# => nil
+```
+
+**Parameters:**
+- `voter_id` (String): The voter ID to format
+
+**Returns:**
+- `String`: Formatted voter ID ("XXXX XXXX XX XX") if valid
+- `nil`: If the voter ID is invalid
+
+**Format Pattern:**
+```
+690847092828
+│  │  │ │└── Verification digit 2
+│  │  │└──── Verification digit 1
+│  │  └────── Federative union (state code)
+│  └────────── Sequential number (part 2)
+└──────────── Sequential number (part 1)
+
+Formatted: 6908 4709 28 28
+```
+
+#### Generation
+
+##### `generate(federative_union = 'ZZ')`
+
+Generates a random valid Brazilian voter ID for a specific state.
+
+```ruby
+require 'brazilian-utils/voter-id-utils'
+
+# Generate for specific state (using UF code)
+BrazilianUtils::VoterIdUtils.generate('SP')
+# => "123456780140" (random, will vary)
+
+BrazilianUtils::VoterIdUtils.generate('MG')
+# => "987654320211" (random, will vary)
+
+# Generate with default (ZZ = foreigners)
+BrazilianUtils::VoterIdUtils.generate
+# => "555555552801" (random, will vary)
+
+# Case insensitive
+BrazilianUtils::VoterIdUtils.generate('sp')
+# => "876543210125" (random, will vary)
+
+# Invalid UF returns nil
+BrazilianUtils::VoterIdUtils.generate('XX')
+# => nil
+```
+
+**Parameters:**
+- `federative_union` (String): The UF code (e.g., "SP", "MG", "RJ"). Default: "ZZ" (foreigners)
+
+**Returns:**
+- `String`: A valid 12-digit voter ID for the specified state
+- `nil`: If the UF code is invalid
+
+**Supported UF Codes:**
+```ruby
+SP (01)  MG (02)  RJ (03)  RS (04)  BA (05)  PR (06)  CE (07)
+PE (08)  SC (09)  GO (10)  MA (11)  PB (12)  PA (13)  ES (14)
+PI (15)  RN (16)  AL (17)  MT (18)  MS (19)  DF (20)  SE (21)
+AM (22)  RO (23)  AC (24)  AP (25)  RR (26)  TO (27)  ZZ (28)
+```
+
+#### Verification Digit Algorithm
+
+The voter ID uses two verification digits calculated with specific algorithms:
+
+**First Verification Digit (VD1):**
+1. Take the first 8 digits of the sequential number
+2. Multiply each digit by weights [2, 3, 4, 5, 6, 7, 8, 9]
+3. Sum all products
+4. Calculate: sum % 11
+5. Apply special rules:
+   - If result == 10: VD1 = 0
+   - If result == 0 AND state is SP (01) or MG (02): VD1 = 1
+   - Otherwise: VD1 = result
+
+**Second Verification Digit (VD2):**
+1. Take the 2 digits of the federative union and the first verification digit
+2. Multiply by weights [7, 8, 9]
+3. Sum all products
+4. Calculate: sum % 11
+5. Apply special rules:
+   - If result == 10: VD2 = 0
+   - If result == 0 AND state is SP (01) or MG (02): VD2 = 1
+   - Otherwise: VD2 = result
+
+**Example Calculation for "690847092828":**
+
+```
+Sequential: 6 9 0 8 4 7 0 9
+Weights:    2 3 4 5 6 7 8 9
+Products:  12 27 0 40 24 49 0 81
+
+Sum: 12 + 27 + 0 + 40 + 24 + 49 + 0 + 81 = 233
+233 % 11 = 2
+VD1 = 2
+
+Federative Union: 28 (ZZ)
+VD1: 2
+
+Calculation: (2 × 7) + (8 × 8) + (2 × 9)
+           = 14 + 64 + 18 = 96
+96 % 11 = 8
+VD2 = 8
+
+Complete Voter ID: 690847092828 ✓
+```
+
+**Special Cases for SP (01) and MG (02):**
+- These states can have 13-digit voter IDs (9-digit sequential number)
+- When modulo calculation results in 0, the verification digit becomes 1 instead of 0
+- This is a historical quirk from the early voter registration system
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/voter-id-utils'
+
+include BrazilianUtils::VoterIdUtils
+
+# Validate user input
+voterid = '690847092828'
+
+if valid_voter_id?(voterid)
+  formatted = format(voterid)
+  puts "Valid Voter ID: #{formatted}"
+else
+  puts "Invalid Voter ID"
+end
+# => Valid Voter ID: 6908 4709 28 28
+
+# Generate voter IDs for different states
+puts "\nGenerated Voter IDs:"
+%w[SP MG RJ BA DF].each do |uf|
+  voter_id = generate(uf)
+  formatted = format(voter_id)
+  puts "  #{uf}: #{formatted}"
+end
+# => SP: 1234 5678 01 40
+# => MG: 9876 5432 02 11
+# => RJ: 5555 5555 03 91
+# => BA: 1111 2222 05 28
+# => DF: 9999 9999 20 70
+
+# Batch validation
+voter_ids = [
+  '690847092828',
+  '163204010922',
+  '123456789012',
+  '000000000191'
+]
+
+puts "\nBatch Validation:"
+valid_count = 0
+voter_ids.each do |id|
+  if is_valid_voter_id(id)
+    puts "  ✓ #{format_voter_id(id)}"
+    valid_count += 1
+  else
+    puts "  ✗ #{id} [INVALID]"
+  end
+end
+
+puts "\nSummary: #{valid_count}/#{voter_ids.length} valid"
+# => ✓ 6908 4709 28 28
+# => ✓ 1632 0401 09 22
+# => ✗ 123456789012 [INVALID]
+# => ✓ 0000 0000 01 91
+# => Summary: 3/4 valid
+```
+
+**Use Cases:**
+- Validate voter registration in electoral systems
+- Format voter IDs for display on ID cards or websites
+- Generate test data for election management systems
+- Verify voter ID input in registration forms
+- Check voter ID integrity in databases
+- Validate documents in identity verification systems
+
+**Important Notes:**
+- Validation does not check if the voter ID is actually registered or active
+- Only validates format and verification digit calculation
+- The voter ID must be provided as digits only (no spaces or symbols)
+- ZZ (28) is used for voter IDs issued to foreigners living in Brazil
+- SP and MG have historical edge cases with 13-digit voter IDs
+
+**Voter ID Structure:**
+```
+690847092828
+││││││││││└┴── Verification digits (2 digits)
+││││││││└┴──── Federative union / State code (2 digits: 01-28)
+└┴┴┴┴┴┴┴────── Sequential number (8 digits, or 9 for SP/MG)
+
+Total: Usually 12 digits (13 for some SP/MG cases)
+```
+
+**Related Information:**
+- Required document for all Brazilian citizens over 18 years old
+- Voting is mandatory in Brazil (with some exceptions)
+- Each voter ID is unique and linked to an electoral zone and section
+- The sequential number was originally assigned by registration order in each state
+- Electronic voter IDs (e-Título) are now available but use the same number
+- Found on physical voter registration card or electronic app
 
 ### CEP Utils
 
