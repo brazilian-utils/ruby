@@ -43,6 +43,13 @@ This library provides utilities for working with Brazilian-specific data formats
 - Validate legal process ID structure and checksum
 - Generate random legal process IDs
 
+### License Plate Utils
+- Validate Brazilian license plates (old and Mercosul formats)
+- Convert old format plates to Mercosul format
+- Format license plates with proper dash or uppercase
+- Generate random license plates
+- Detect plate format type
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -1390,6 +1397,419 @@ puts "Valid processes: #{valid_processes.length}/#{processes.length}"
 - Generate test data for legal systems
 - Clean and normalize user input
 - Verify tribunal and foro combinations
+
+### License Plate Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/license_plate.py) implementation.
+
+Utilities for formatting, validating, converting, and generating Brazilian license plates. Brazilian license plates come in two formats:
+
+1. **Old Format (LLLNNNN)**: 3 letters + 4 numbers, e.g., "ABC-1234"
+2. **Mercosul Format (LLLNLNN)**: 3 letters + 1 number + 1 letter + 2 numbers, e.g., "ABC1D34"
+
+The Mercosul format was introduced in 2018 as part of a standardization effort across Mercosul countries (Argentina, Brazil, Paraguay, Uruguay, and Venezuela).
+
+#### Format Conversion
+
+##### `convert_to_mercosul(license_plate)`
+
+Converts an old format license plate (LLLNNNN) to the new Mercosul format (LLLNLNN).
+
+The conversion algorithm replaces the first digit (position 4) with its corresponding letter:
+- 0 → A
+- 1 → B
+- 2 → C
+- 3 → D
+- 4 → E
+- 5 → F
+- 6 → G
+- 7 → H
+- 8 → I
+- 9 → J
+
+```ruby
+require 'brazilian-utils/license-plate-utils'
+
+# Convert old format to Mercosul
+BrazilianUtils::LicensePlateUtils.convert_to_mercosul('ABC1234')
+# => "ABC1C34" (4th character '2' → 'C')
+
+BrazilianUtils::LicensePlateUtils.convert_to_mercosul('ABC4567')
+# => "ABC4F67" (4th character '5' → 'F')
+
+BrazilianUtils::LicensePlateUtils.convert_to_mercosul('ABC-1234')
+# => "ABC1C34" (dash is removed automatically)
+
+BrazilianUtils::LicensePlateUtils.convert_to_mercosul('abc9876')
+# => "ABC9J76" (converted to uppercase, '9' → 'J')
+
+# Invalid conversions
+BrazilianUtils::LicensePlateUtils.convert_to_mercosul('ABC1D34')
+# => nil (already Mercosul format)
+
+BrazilianUtils::LicensePlateUtils.convert_to_mercosul('ABCD123')
+# => nil (invalid format)
+```
+
+**Parameters:**
+- `license_plate` (String): A license plate in old format (LLLNNNN)
+
+**Returns:**
+- `String`: The converted Mercosul format plate (LLLNLNN)
+- `nil`: If the input is not a valid old format plate
+
+**Important Notes:**
+- Only converts from old format to Mercosul, not vice versa
+- Accepts plates with or without dash
+- Automatically converts to uppercase
+- Does not validate if the plate actually exists
+
+#### Formatting
+
+##### `format_license_plate(license_plate)` / `format(license_plate)`
+
+Formats a license plate into the correct visual pattern:
+- **Old format**: Adds dash between letters and numbers (ABC-1234)
+- **Mercosul format**: Returns uppercase without dash (ABC1D34)
+
+```ruby
+# Format old format plates
+BrazilianUtils::LicensePlateUtils.format_license_plate('ABC1234')
+# => "ABC-1234"
+
+BrazilianUtils::LicensePlateUtils.format_license_plate('abc1234')
+# => "ABC-1234"
+
+BrazilianUtils::LicensePlateUtils.format_license_plate('ABC-1234')
+# => "ABC-1234" (already formatted)
+
+# Format Mercosul plates
+BrazilianUtils::LicensePlateUtils.format_license_plate('abc1d34')
+# => "ABC1D34"
+
+BrazilianUtils::LicensePlateUtils.format_license_plate('ABC1D34')
+# => "ABC1D34"
+
+# Using the alias
+BrazilianUtils::LicensePlateUtils.format('XYZ9876')
+# => "XYZ-9876"
+
+# Invalid format
+BrazilianUtils::LicensePlateUtils.format_license_plate('ABCD123')
+# => nil
+```
+
+**Parameters:**
+- `license_plate` (String): A license plate string in either format
+
+**Returns:**
+- `String`: The formatted license plate
+- `nil`: If the input is not a valid plate
+
+#### Validation
+
+##### `is_valid(license_plate, type = nil)` / `valid?(license_plate, type = nil)`
+
+Validates a Brazilian license plate format.
+
+```ruby
+# Validate any format (default)
+BrazilianUtils::LicensePlateUtils.is_valid('ABC1234')
+# => true (old format)
+
+BrazilianUtils::LicensePlateUtils.is_valid('ABC1D34')
+# => true (Mercosul format)
+
+BrazilianUtils::LicensePlateUtils.is_valid('ABC-1234')
+# => true (old format with dash)
+
+# Validate specific format
+BrazilianUtils::LicensePlateUtils.is_valid('ABC1234', :old_format)
+# => true
+
+BrazilianUtils::LicensePlateUtils.is_valid('ABC1D34', :old_format)
+# => false (not old format)
+
+BrazilianUtils::LicensePlateUtils.is_valid('ABC1D34', :mercosul)
+# => true
+
+BrazilianUtils::LicensePlateUtils.is_valid('ABC1234', :mercosul)
+# => false (not Mercosul format)
+
+# Using string format type
+BrazilianUtils::LicensePlateUtils.is_valid('ABC1234', 'old_format')
+# => true
+
+BrazilianUtils::LicensePlateUtils.is_valid('ABC1D34', 'mercosul')
+# => true
+
+# Using the alias
+BrazilianUtils::LicensePlateUtils.valid?('ABC1234')
+# => true
+
+# Invalid plates
+BrazilianUtils::LicensePlateUtils.is_valid('ABCD123')
+# => false (wrong pattern)
+
+BrazilianUtils::LicensePlateUtils.is_valid('ABC123')
+# => false (too short)
+
+BrazilianUtils::LicensePlateUtils.is_valid('12345678')
+# => false (only numbers)
+```
+
+**Parameters:**
+- `license_plate` (String): The license plate to validate
+- `type` (Symbol, String, nil): Optional format type to validate
+  - `:old_format` or `"old_format"`: Validate as old format only
+  - `:mercosul` or `"mercosul"`: Validate as Mercosul format only
+  - `nil`: Validate as either format (default)
+
+**Returns:**
+- `true`: If the plate is valid
+- `false`: If the plate is invalid
+
+**Validation Rules:**
+- **Old format**: Must match LLLNNNN pattern (3 letters + 4 numbers)
+- **Mercosul format**: Must match LLLNLNN pattern (3 letters + 1 number + 1 letter + 2 numbers)
+- Accepts lowercase letters (automatically validated as uppercase)
+- Accepts plates with or without dash
+- Does not verify if the plate actually exists
+
+#### Symbol Removal
+
+##### `remove_symbols(license_plate_number)`
+
+Removes the dash (-) symbol from a license plate string.
+
+```ruby
+BrazilianUtils::LicensePlateUtils.remove_symbols('ABC-1234')
+# => "ABC1234"
+
+BrazilianUtils::LicensePlateUtils.remove_symbols('XYZ-9876')
+# => "XYZ9876"
+
+BrazilianUtils::LicensePlateUtils.remove_symbols('ABC1234')
+# => "ABC1234" (no change)
+
+BrazilianUtils::LicensePlateUtils.remove_symbols('ABC1D34')
+# => "ABC1D34" (Mercosul format has no dash)
+```
+
+**Parameters:**
+- `license_plate_number` (String): A license plate string
+
+**Returns:**
+- `String`: The plate with dashes removed
+
+#### Format Detection
+
+##### `get_format(license_plate)`
+
+Detects and returns the format of a license plate.
+
+```ruby
+# Detect old format
+BrazilianUtils::LicensePlateUtils.get_format('ABC1234')
+# => "LLLNNNN"
+
+BrazilianUtils::LicensePlateUtils.get_format('ABC-1234')
+# => "LLLNNNN" (dash removed automatically)
+
+BrazilianUtils::LicensePlateUtils.get_format('abc1234')
+# => "LLLNNNN" (case insensitive)
+
+# Detect Mercosul format
+BrazilianUtils::LicensePlateUtils.get_format('ABC1D34')
+# => "LLLNLNN"
+
+BrazilianUtils::LicensePlateUtils.get_format('abc1d34')
+# => "LLLNLNN"
+
+# Invalid plates
+BrazilianUtils::LicensePlateUtils.get_format('ABCD123')
+# => nil
+
+BrazilianUtils::LicensePlateUtils.get_format('ABC123')
+# => nil
+```
+
+**Parameters:**
+- `license_plate` (String): A license plate string
+
+**Returns:**
+- `"LLLNNNN"`: Old format (3 letters + 4 numbers)
+- `"LLLNLNN"`: Mercosul format (3 letters + 1 number + 1 letter + 2 numbers)
+- `nil`: If the plate is invalid
+
+#### Generation
+
+##### `generate(format = 'LLLNLNN')`
+
+Generates a random valid license plate.
+
+```ruby
+# Generate Mercosul format (default)
+BrazilianUtils::LicensePlateUtils.generate
+# => "ABC1D34" (example, actual value is random)
+
+BrazilianUtils::LicensePlateUtils.generate('LLLNLNN')
+# => "XYZ2E45" (example)
+
+# Generate old format
+BrazilianUtils::LicensePlateUtils.generate('LLLNNNN')
+# => "ABC1234" (example)
+
+# Case insensitive
+BrazilianUtils::LicensePlateUtils.generate('lllnnnn')
+# => "DEF5678" (example)
+
+# Invalid format
+BrazilianUtils::LicensePlateUtils.generate('invalid')
+# => nil
+
+BrazilianUtils::LicensePlateUtils.generate('LLLLNNN')
+# => nil (wrong pattern)
+```
+
+**Parameters:**
+- `format` (String): The desired format pattern
+  - `"LLLNLNN"`: Generate Mercosul format (default)
+  - `"LLLNNNN"`: Generate old format
+  - Case insensitive
+
+**Returns:**
+- `String`: A randomly generated valid license plate
+- `nil`: If the format is invalid
+
+**Generated Plates:**
+- Always match the specified format pattern
+- Use random uppercase letters (A-Z)
+- Use random digits (0-9)
+- Are immediately valid (can be formatted and validated)
+- Do not correspond to real plates
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/license-plate-utils'
+
+include BrazilianUtils::LicensePlateUtils
+
+# Scenario 1: User enters an old format plate
+user_input = 'abc-1234'
+
+if is_valid(user_input)
+  # Get the format
+  format = get_format(user_input)
+  puts "Format: #{format}"
+  # => Format: LLLNNNN
+  
+  # Format for display
+  formatted = format_license_plate(user_input)
+  puts "Formatted: #{formatted}"
+  # => Formatted: ABC-1234
+  
+  # Convert to Mercosul format
+  mercosul = convert_to_mercosul(user_input)
+  puts "Mercosul: #{mercosul}"
+  # => Mercosul: ABC1C34
+  
+  # Format the Mercosul plate
+  mercosul_formatted = format_license_plate(mercosul)
+  puts "Mercosul formatted: #{mercosul_formatted}"
+  # => Mercosul formatted: ABC1C34
+else
+  puts "Invalid plate"
+end
+
+# Scenario 2: Generate test data
+puts "\nGenerating test plates:"
+
+# Generate 5 old format plates
+old_plates = 5.times.map { generate('LLLNNNN') }
+old_plates.each do |plate|
+  formatted = format_license_plate(plate)
+  puts "  Old: #{formatted}"
+end
+# => Old: ABC-1234
+# => Old: DEF-5678
+# => ...
+
+# Generate 5 Mercosul plates
+mercosul_plates = 5.times.map { generate('LLLNLNN') }
+mercosul_plates.each do |plate|
+  formatted = format_license_plate(plate)
+  puts "  Mercosul: #{formatted}"
+end
+# => Mercosul: ABC1D34
+# => Mercosul: XYZ2E56
+# => ...
+
+# Scenario 3: Validate and convert user database
+plates_database = [
+  'ABC-1234',
+  'DEF5678',
+  'GHI1J23',
+  'INVALID',
+  'xyz-9876'
+]
+
+puts "\nProcessing database:"
+plates_database.each do |plate|
+  if is_valid(plate)
+    format = get_format(plate)
+    
+    if format == 'LLLNNNN'
+      # Old format - convert to Mercosul
+      mercosul = convert_to_mercosul(plate)
+      puts "  #{format_license_plate(plate)} → #{mercosul} (converted)"
+    else
+      # Already Mercosul
+      puts "  #{format_license_plate(plate)} (already Mercosul)"
+    end
+  else
+    puts "  #{plate} (INVALID)"
+  end
+end
+# => ABC-1234 → ABC1C34 (converted)
+# => DEF-5678 → DEF5F78 (converted)
+# => GHI1J23 (already Mercosul)
+# => INVALID (INVALID)
+# => XYZ-9876 → XYZ9J76 (converted)
+
+# Scenario 4: Validate with specific format
+plate_to_check = 'ABC1234'
+
+if is_valid(plate_to_check, :old_format)
+  puts "\n#{plate_to_check} is old format"
+elsif is_valid(plate_to_check, :mercosul)
+  puts "\n#{plate_to_check} is Mercosul format"
+else
+  puts "\n#{plate_to_check} is invalid"
+end
+# => ABC1234 is old format
+```
+
+**Use Cases:**
+- Validate license plates in vehicle registration systems
+- Convert legacy old format plates to Mercosul format
+- Format plates for display in documents and interfaces
+- Generate test data for transportation systems
+- Detect plate format for conditional processing
+- Clean user input by removing dashes
+- Validate specific format requirements (e.g., only accept Mercosul)
+
+**Format Comparison:**
+
+| Aspect | Old Format (LLLNNNN) | Mercosul Format (LLLNLNN) |
+|--------|---------------------|---------------------------|
+| Pattern | ABC-1234 | ABC1D34 |
+| Positions | 3 letters + 4 numbers | 3 letters + 1 number + 1 letter + 2 numbers |
+| Visual | Has dash separator | No dash |
+| Introduced | Original format | 2018 (Mercosul standard) |
+| Conversion | Can convert to Mercosul | Cannot convert to old format |
+| Countries | Brazil only | Brazil, Argentina, Paraguay, Uruguay, Venezuela |
 
 ### CEP Utils
 
