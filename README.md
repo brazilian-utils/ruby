@@ -33,6 +33,11 @@ This library provides utilities for working with Brazilian-specific data formats
 ### Email Utils
 - Email address validation following RFC 5322 specifications
 
+### Legal Nature Utils
+- Validate official Brazilian Legal Nature (Natureza Jurídica) codes
+- Lookup descriptions for legal nature codes
+- Browse codes by category
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -866,6 +871,268 @@ result = validate_contact_form('Maria', 'invalid-email', 'Hi!')
 puts result
 # => {:valid=>false, :errors=>["Invalid email format"]}
 ```
+
+### Legal Nature Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/legal_nature.py) implementation.
+
+Utilities for consulting and validating official *Natureza Jurídica* (Legal Nature) codes defined by the Receita Federal do Brasil (RFB). The codes and descriptions are sourced from the official **Tabela de Natureza Jurídica**.
+
+#### Code Validation
+
+##### `is_valid(code)` / `valid?(code)`
+
+Checks if a string corresponds to a valid *Natureza Jurídica* code.
+
+```ruby
+require 'brazilian-utils/legal-nature-utils'
+
+# Valid codes (without hyphen)
+BrazilianUtils::LegalNatureUtils.is_valid('2062')
+# => true (Sociedade Empresária Limitada)
+
+BrazilianUtils::LegalNatureUtils.is_valid('1015')
+# => true (Órgão Público do Poder Executivo Federal)
+
+BrazilianUtils::LegalNatureUtils.is_valid('2305')
+# => true (Empresa Individual de Responsabilidade Limitada)
+
+# Valid codes (with hyphen format)
+BrazilianUtils::LegalNatureUtils.is_valid('206-2')
+# => true
+
+BrazilianUtils::LegalNatureUtils.is_valid('101-5')
+# => true
+
+# Invalid codes
+BrazilianUtils::LegalNatureUtils.is_valid('9999')
+# => false (not in official table)
+
+BrazilianUtils::LegalNatureUtils.is_valid('0000')
+# => false
+
+# Using the alias
+BrazilianUtils::LegalNatureUtils.valid?('2062')
+# => true
+```
+
+**Parameters:**
+- `code` (String): The code to validate. Accepts "NNNN" or "NNN-N" format.
+
+**Returns:**
+- `true`: If the code exists in the official RFB table
+- `false`: If the code is invalid or not in the table
+
+**Important Notes:**
+- Validation is based solely on presence in the official RFB table
+- Does not verify current legal status or registration of entities
+- Accepts codes with or without hyphen separator
+- Whitespace is automatically trimmed
+
+#### Description Lookup
+
+##### `get_description(code)`
+
+Retrieves the full description of a *Natureza Jurídica* code.
+
+```ruby
+# Get description for valid codes
+BrazilianUtils::LegalNatureUtils.get_description('2062')
+# => "Sociedade Empresária Limitada"
+
+BrazilianUtils::LegalNatureUtils.get_description('101-5')
+# => "Órgão Público do Poder Executivo Federal"
+
+BrazilianUtils::LegalNatureUtils.get_description('1015')
+# => "Órgão Público do Poder Executivo Federal"
+
+BrazilianUtils::LegalNatureUtils.get_description('2305')
+# => "Empresa Individual de Responsabilidade Limitada"
+
+BrazilianUtils::LegalNatureUtils.get_description('3123')
+# => "Partido Político"
+
+BrazilianUtils::LegalNatureUtils.get_description('2046')
+# => "Sociedade Anônima Aberta"
+
+BrazilianUtils::LegalNatureUtils.get_description('2054')
+# => "Sociedade Anônima Fechada"
+
+# Invalid codes return nil
+BrazilianUtils::LegalNatureUtils.get_description('0000')
+# => nil
+
+BrazilianUtils::LegalNatureUtils.get_description('invalid')
+# => nil
+```
+
+**Parameters:**
+- `code` (String): The code to look up. Accepts "NNNN" or "NNN-N" format.
+
+**Returns:**
+- `String`: Full description in Portuguese if valid
+- `nil`: If the code is invalid or not found
+
+#### List All Codes
+
+##### `list_all()`
+
+Returns a copy of the complete *Natureza Jurídica* table.
+
+```ruby
+all_codes = BrazilianUtils::LegalNatureUtils.list_all
+
+# Access specific codes
+all_codes['2062']
+# => "Sociedade Empresária Limitada"
+
+# Get total count
+all_codes.size
+# => 64 (total codes in official table)
+
+# Iterate through all codes
+all_codes.each do |code, description|
+  puts "#{code}: #{description}"
+end
+```
+
+**Returns:**
+- `Hash<String, String>`: Mapping from 4-digit codes to Portuguese descriptions
+
+#### List by Category
+
+##### `list_by_category(category)`
+
+Returns all codes within a specific category.
+
+```ruby
+# Category 1: Administração Pública (Public Administration)
+business = BrazilianUtils::LegalNatureUtils.list_by_category(1)
+# => {"1015"=>"Órgão Público do Poder Executivo Federal", ...}
+
+# Category 2: Entidades Empresariais (Business Entities)
+business = BrazilianUtils::LegalNatureUtils.list_by_category(2)
+# => {"2011"=>"Empresa Pública", "2062"=>"Sociedade Empresária Limitada", ...}
+
+# Category 3: Entidades Sem Fins Lucrativos (Non-Profit Entities)
+non_profit = BrazilianUtils::LegalNatureUtils.list_by_category(3)
+# => {"3123"=>"Partido Político", "3050"=>"Organização da Sociedade Civil...", ...}
+
+# Category 4: Pessoas Físicas (Individuals)
+individuals = BrazilianUtils::LegalNatureUtils.list_by_category(4)
+# => {"4014"=>"Empresa Individual Imobiliária", ...}
+
+# Category 5: Organizações Internacionais (International Organizations)
+international = BrazilianUtils::LegalNatureUtils.list_by_category(5)
+# => {"5002"=>"Organização Internacional e Outras Instituições...", ...}
+
+# Accepts category as integer or string
+BrazilianUtils::LegalNatureUtils.list_by_category('2')
+# => Same as list_by_category(2)
+```
+
+**Parameters:**
+- `category` (Integer, String): Category number (1-5)
+
+**Returns:**
+- `Hash<String, String>`: Codes and descriptions for the specified category
+- `{}`: Empty hash if category is invalid
+
+**Categories:**
+- **1**: Administração Pública (Public Administration)
+- **2**: Entidades Empresariais (Business Entities)
+- **3**: Entidades Sem Fins Lucrativos (Non-Profit Entities)
+- **4**: Pessoas Físicas (Individuals)
+- **5**: Organizações Internacionais (International Organizations)
+
+#### Get Category
+
+##### `get_category(code)`
+
+Returns the category number for a given code.
+
+```ruby
+BrazilianUtils::LegalNatureUtils.get_category('2062')
+# => 2 (Entidades Empresariais)
+
+BrazilianUtils::LegalNatureUtils.get_category('101-5')
+# => 1 (Administração Pública)
+
+BrazilianUtils::LegalNatureUtils.get_category('3123')
+# => 3 (Entidades Sem Fins Lucrativos)
+
+BrazilianUtils::LegalNatureUtils.get_category('9999')
+# => nil (invalid code)
+```
+
+**Parameters:**
+- `code` (String): The code to check. Accepts "NNNN" or "NNN-N" format.
+
+**Returns:**
+- `Integer`: Category number (1-5) if valid
+- `nil`: If the code is invalid
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/legal-nature-utils'
+
+# Validate a company's legal nature code
+company_code = '2062'
+
+if BrazilianUtils::LegalNatureUtils.valid?(company_code)
+  description = BrazilianUtils::LegalNatureUtils.get_description(company_code)
+  category = BrazilianUtils::LegalNatureUtils.get_category(company_code)
+  
+  puts "Código: #{company_code}"
+  puts "Descrição: #{description}"
+  puts "Categoria: #{category}"
+  # => Código: 2062
+  # => Descrição: Sociedade Empresária Limitada
+  # => Categoria: 2
+else
+  puts "Código de natureza jurídica inválido"
+end
+
+# Browse all business entities
+puts "\nTodas as Entidades Empresariais:"
+business_entities = BrazilianUtils::LegalNatureUtils.list_by_category(2)
+business_entities.each do |code, description|
+  puts "  #{code}: #{description}"
+end
+
+# Search for political parties
+all_codes = BrazilianUtils::LegalNatureUtils.list_all
+political_codes = all_codes.select { |_, desc| desc.downcase.include?('partido') }
+puts "\nCódigos relacionados a partidos:"
+political_codes.each do |code, description|
+  puts "  #{code}: #{description}"
+end
+# => 3123: Partido Político
+
+# Validate multiple codes
+codes_to_check = ['2062', '206-2', '9999', '1015', 'invalid']
+puts "\nValidação de múltiplos códigos:"
+codes_to_check.each do |code|
+  status = BrazilianUtils::LegalNatureUtils.valid?(code) ? '✓' : '✗'
+  desc = BrazilianUtils::LegalNatureUtils.get_description(code) || 'N/A'
+  puts "  #{status} #{code.ljust(10)} - #{desc}"
+end
+```
+
+**Common Legal Nature Codes:**
+- **2062**: Sociedade Empresária Limitada (LLC)
+- **2046**: Sociedade Anônima Aberta (Public Corporation)
+- **2054**: Sociedade Anônima Fechada (Private Corporation)
+- **2305**: Empresa Individual de Responsabilidade Limitada (EIRELI)
+- **2135**: Empresário (Individual)
+- **2143**: Cooperativa
+- **3123**: Partido Político
+- **3050**: OSCIP (Civil Society Organization of Public Interest)
+- **1015**: Federal Public Agency
+
+**Data Source:**
+Official table from Receita Federal: https://www.gov.br/empresas-e-negocios/pt-br/drei/links-e-downloads/arquivos/TABELADENATUREZAJURDICA.pdf
 
 ### CEP Utils
 
