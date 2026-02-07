@@ -38,6 +38,11 @@ This library provides utilities for working with Brazilian-specific data formats
 - Lookup descriptions for legal nature codes
 - Browse codes by category
 
+### Legal Process Utils
+- Format Brazilian legal process IDs
+- Validate legal process ID structure and checksum
+- Generate random legal process IDs
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -1133,6 +1138,258 @@ end
 
 **Data Source:**
 Official table from Receita Federal: https://www.gov.br/empresas-e-negocios/pt-br/drei/links-e-downloads/arquivos/TABELADENATUREZAJURDICA.pdf
+
+### Legal Process Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/legal_process.py) implementation.
+
+Utilities for formatting, validating, and generating Brazilian Legal Process IDs (Número de Processo Judicial). A legal process ID is a 20-digit code that identifies a legal case in the Brazilian judiciary system.
+
+**Format:** NNNNNNN-DD.AAAA.J.TR.OOOO
+
+Where:
+- **NNNNNNN**: Sequential number (7 digits)
+- **DD**: Verification digits (2 digits) - checksum
+- **AAAA**: Year the process was filed (4 digits)
+- **J**: Judicial segment (1 digit) - Órgão (1-9)
+- **TR**: Court (2 digits) - Tribunal
+- **OOOO**: Court of origin (4 digits) - Foro
+
+#### Removing Symbols
+
+##### `remove_symbols(legal_process)`
+
+Removes specific symbols (dots and hyphens) from a legal process ID.
+
+```ruby
+require 'brazilian-utils/legal-process-utils'
+
+BrazilianUtils::LegalProcessUtils.remove_symbols('123.45-678.901.234-56.7890')
+# => "12345678901234567890"
+
+BrazilianUtils::LegalProcessUtils.remove_symbols('9876543-21.0987.6.54.3210')
+# => "98765432109876543210"
+
+BrazilianUtils::LegalProcessUtils.remove_symbols('1234567-89.0123.4.56.7890')
+# => "12345678901234567890"
+```
+
+**Parameters:**
+- `legal_process` (String): A legal process ID containing symbols to be removed
+
+**Returns:**
+- `String`: The legal process ID with dots and hyphens removed
+
+#### Formatting
+
+##### `format_legal_process(legal_process_id)`
+
+Formats a 20-digit legal process ID into the standard format.
+
+```ruby
+# Format a 20-digit string
+BrazilianUtils::LegalProcessUtils.format_legal_process('12345678901234567890')
+# => "1234567-89.0123.4.56.7890"
+
+BrazilianUtils::LegalProcessUtils.format_legal_process('98765432109876543210')
+# => "9876543-21.0987.6.54.3210"
+
+BrazilianUtils::LegalProcessUtils.format_legal_process('68476506020233030000')
+# => "6847650-60.2023.3.03.0000"
+
+# Invalid input
+BrazilianUtils::LegalProcessUtils.format_legal_process('123')
+# => nil (wrong length)
+
+BrazilianUtils::LegalProcessUtils.format_legal_process('abcd567890123456789')
+# => nil (contains non-digits)
+```
+
+**Parameters:**
+- `legal_process_id` (String): A 20-digit string representing the legal process ID
+
+**Returns:**
+- `String`: The formatted legal process ID (NNNNNNN-DD.AAAA.J.TR.OOOO)
+- `nil`: If the input is invalid
+
+#### Validation
+
+##### `is_valid(legal_process_id)` / `valid?(legal_process_id)`
+
+Checks if a legal process ID is valid.
+
+```ruby
+# Valid IDs (without formatting)
+BrazilianUtils::LegalProcessUtils.is_valid('68476506020233030000')
+# => true
+
+BrazilianUtils::LegalProcessUtils.is_valid('51808233620233030000')
+# => true
+
+# Valid IDs (with formatting)
+BrazilianUtils::LegalProcessUtils.is_valid('6847650-60.2023.3.03.0000')
+# => true
+
+BrazilianUtils::LegalProcessUtils.is_valid('5180823-36.2023.3.03.0000')
+# => true
+
+# Invalid IDs
+BrazilianUtils::LegalProcessUtils.is_valid('123')
+# => false (wrong length)
+
+BrazilianUtils::LegalProcessUtils.is_valid('12345678901234567890')
+# => false (invalid checksum)
+
+BrazilianUtils::LegalProcessUtils.is_valid('1234567-89.2023.0.01.0000')
+# => false (invalid órgão)
+
+# Using the alias
+BrazilianUtils::LegalProcessUtils.valid?('68476506020233030000')
+# => true
+```
+
+**Parameters:**
+- `legal_process_id` (String): A digit-only or formatted string representing the legal process ID
+
+**Returns:**
+- `true`: If the legal process ID is valid
+- `false`: If the legal process ID is invalid
+
+**Validation Checks:**
+1. **Format**: Must be 20 digits
+2. **Checksum**: Verification digits (DD) must be correct
+3. **Structure**: Tribunal (TR) and Foro (OOOO) must be valid for the specified Órgão (J)
+
+**Important Notes:**
+- This function does not verify if the legal process ID corresponds to a real case
+- It only validates the format and structure according to CNJ (Conselho Nacional de Justiça) rules
+- Accepts both formatted and unformatted IDs
+
+#### Generation
+
+##### `generate(year = current_year, orgao = random)`
+
+Generates a random valid legal process ID.
+
+```ruby
+# Generate with current year and random órgão
+BrazilianUtils::LegalProcessUtils.generate
+# => "51659517020265080562" (example, actual value is random)
+
+# Generate with specific year
+BrazilianUtils::LegalProcessUtils.generate(2026)
+# => "88031888120263030000" (random órgão)
+
+# Generate with specific year and órgão
+BrazilianUtils::LegalProcessUtils.generate(2026, 5)
+# => "12345678920265080123" (órgão 5 = Justiça do Trabalho)
+
+BrazilianUtils::LegalProcessUtils.generate(2026, 3)
+# => "98765432120263010000" (órgão 3 = Justiça Militar)
+
+# Invalid parameters
+BrazilianUtils::LegalProcessUtils.generate(2022, 5)
+# => nil (year in the past)
+
+BrazilianUtils::LegalProcessUtils.generate(2026, 10)
+# => nil (órgão out of range 1-9)
+```
+
+**Parameters:**
+- `year` (Integer): The year for the legal process ID (default: current year). Must not be in the past.
+- `orgao` (Integer): The judicial segment code (1-9), default is random
+
+**Returns:**
+- `String`: A randomly generated valid legal process ID (20 digits)
+- `nil`: If arguments are invalid
+
+**Órgãos (Judicial Segments):**
+- **1**: Supremo Tribunal Federal (STF)
+- **2**: Conselho Nacional de Justiça (CNJ)
+- **3**: Justiça Militar
+- **4**: Justiça Eleitoral
+- **5**: Justiça do Trabalho
+- **6**: Justiça Federal
+- **7**: Justiça Estadual
+- **8**: Justiça dos Estados e do Distrito Federal
+- **9**: Justiça Militar Estadual
+
+**Generated IDs:**
+- Are always valid (correct checksum and structure)
+- Have random sequential number (NNNNNNN)
+- Use valid Tribunal and Foro combinations for the specified Órgão
+- Can be formatted and validated immediately
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/legal-process-utils'
+
+# Generate a new legal process ID
+process_id = BrazilianUtils::LegalProcessUtils.generate(2026, 5)
+puts "Generated ID: #{process_id}"
+# => Generated ID: 51659517020265080562
+
+# Format the ID
+formatted = BrazilianUtils::LegalProcessUtils.format_legal_process(process_id)
+puts "Formatted: #{formatted}"
+# => Formatted: 5165951-70.2026.5.08.0562
+
+# Validate the ID
+if BrazilianUtils::LegalProcessUtils.valid?(process_id)
+  puts "ID is valid!"
+  
+  # Extract information from the formatted ID
+  parts = formatted.split(/[-.]/)  # Split by hyphen and dots
+  puts "  Sequential: #{parts[0]}"
+  puts "  Checksum: #{parts[1]}"
+  puts "  Year: #{parts[2]}"
+  puts "  Órgão: #{parts[3]}"
+  puts "  Tribunal: #{parts[4]}"
+  puts "  Foro: #{parts[5]}"
+else
+  puts "ID is invalid"
+end
+
+# Validate user input
+user_input = '6847650-60.2023.3.03.0000'
+
+if BrazilianUtils::LegalProcessUtils.valid?(user_input)
+  # Remove formatting for storage
+  clean_id = BrazilianUtils::LegalProcessUtils.remove_symbols(user_input)
+  puts "Storing process: #{clean_id}"
+  # => Storing process: 68476506020233030000
+  
+  # Can format again for display
+  display = BrazilianUtils::LegalProcessUtils.format_legal_process(clean_id)
+  puts "Display format: #{display}"
+  # => Display format: 6847650-60.2023.3.03.0000
+else
+  puts "Invalid legal process ID"
+end
+
+# Batch validation
+processes = [
+  '68476506020233030000',
+  '51808233620233030000',
+  '12345678901234567890',
+  '6847650-60.2023.3.03.0000'
+]
+
+valid_processes = processes.select do |id|
+  BrazilianUtils::LegalProcessUtils.valid?(id)
+end
+
+puts "Valid processes: #{valid_processes.length}/#{processes.length}"
+# => Valid processes: 3/4
+```
+
+**Use Cases:**
+- Validate legal process IDs in forms and databases
+- Format IDs for display in documents and interfaces
+- Generate test data for legal systems
+- Clean and normalize user input
+- Verify tribunal and foro combinations
 
 ### CEP Utils
 
