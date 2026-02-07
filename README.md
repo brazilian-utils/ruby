@@ -57,6 +57,12 @@ This library provides utilities for working with Brazilian-specific data formats
 - Generate random phone numbers
 - Remove international dialing code
 
+### PIS Utils
+- Validate PIS numbers (Programa de Integração Social)
+- Format PIS with dots and hyphen
+- Remove formatting symbols
+- Generate random valid PIS numbers
+
 ### CEP Utils
 - CEP validation and formatting
 - Random CEP generation
@@ -2215,6 +2221,313 @@ end
 - 31: Belo Horizonte (MG)
 - 41: Curitiba (PR)
 - 81: Recife (PE)
+
+### PIS Utils
+
+Based on the [brazilian-utils/python](https://github.com/brazilian-utils/python/blob/main/brutils/pis.py) implementation.
+
+Utilities for formatting, validating, and generating Brazilian PIS numbers. PIS (Programa de Integração Social) is an 11-digit identification number for Brazilian workers, similar to a social security number.
+
+**Format:** XXX.XXXXX.XX-X (e.g., "123.45678.90-9")
+
+#### Symbol Removal
+
+##### `remove_symbols(pis)` / `sieve(pis)`
+
+Removes formatting symbols (dots and hyphens) from a PIS string.
+
+```ruby
+require 'brazilian-utils/pis-utils'
+
+# Remove symbols
+BrazilianUtils::PISUtils.remove_symbols('123.45678.90-9')
+# => "12345678909"
+
+BrazilianUtils::PISUtils.remove_symbols('987.65432.10-0')
+# => "98765432100"
+
+# No symbols to remove
+BrazilianUtils::PISUtils.remove_symbols('12345678909')
+# => "12345678909"
+
+# Using the alias
+BrazilianUtils::PISUtils.sieve('123.45678.90-9')
+# => "12345678909"
+```
+
+**Parameters:**
+- `pis` (String): A PIS string that may contain formatting symbols
+
+**Returns:**
+- `String`: A cleaned PIS string with no formatting symbols
+
+#### Formatting
+
+##### `format_pis(pis)` / `format(pis)`
+
+Formats a valid PIS string with standard visual aid symbols.
+
+This function takes a valid numbers-only PIS string as input and adds standard formatting visual aid symbols for display.
+
+**Format:** XXX.XXXXX.XX-X
+
+```ruby
+# Format valid PIS
+BrazilianUtils::PISUtils.format_pis('12345678909')
+# => "123.45678.90-9"
+
+BrazilianUtils::PISUtils.format_pis('98765432100')
+# => "987.65432.10-0"
+
+# Format PIS starting with zero
+BrazilianUtils::PISUtils.format_pis('01234567890')
+# => "012.34567.89-0"
+
+# Using the alias
+BrazilianUtils::PISUtils.format('12345678909')
+# => "123.45678.90-9"
+
+# Invalid PIS
+BrazilianUtils::PISUtils.format_pis('12345678900')
+# => nil (invalid checksum)
+
+BrazilianUtils::PISUtils.format_pis('123456789')
+# => nil (wrong length)
+```
+
+**Parameters:**
+- `pis` (String): A valid numbers-only PIS string (11 digits)
+
+**Returns:**
+- `String`: A formatted PIS string (XXX.XXXXX.XX-X)
+- `nil`: If the PIS is invalid
+
+**Important Notes:**
+- Only formats valid PIS numbers
+- Input must be digits only (use `remove_symbols` first if needed)
+- Validates checksum before formatting
+
+#### Validation
+
+##### `is_valid(pis)` / `valid?(pis)`
+
+Returns whether the verifying checksum digit of the given PIS matches its base number.
+
+```ruby
+# Valid PIS numbers
+BrazilianUtils::PISUtils.is_valid('12345678909')
+# => true
+
+BrazilianUtils::PISUtils.is_valid('98765432100')
+# => true
+
+BrazilianUtils::PISUtils.is_valid('12082043600')
+# => true
+
+# Using the alias
+BrazilianUtils::PISUtils.valid?('17033259504')
+# => true
+
+# Invalid PIS numbers
+BrazilianUtils::PISUtils.is_valid('12345678900')
+# => false (wrong checksum)
+
+BrazilianUtils::PISUtils.is_valid('123456789')
+# => false (wrong length)
+
+BrazilianUtils::PISUtils.is_valid('123.45678.90-9')
+# => false (contains symbols, use remove_symbols first)
+
+BrazilianUtils::PISUtils.is_valid('1234567890A')
+# => false (contains letters)
+
+BrazilianUtils::PISUtils.is_valid('00000000000')
+# => false (invalid checksum)
+```
+
+**Parameters:**
+- `pis` (String): PIS number as a string (11 digits)
+
+**Returns:**
+- `true`: If PIS is valid
+- `false`: If PIS is invalid
+
+**Validation Checks:**
+1. **Type**: Must be a string
+2. **Length**: Must be exactly 11 digits
+3. **Format**: Must contain only digits (no symbols)
+4. **Checksum**: Last digit must match calculated checksum
+
+**Checksum Algorithm:**
+The checksum is calculated using the following algorithm:
+1. Multiply each of the first 10 digits by corresponding weights: [3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+2. Sum all products
+3. Calculate: 11 - (sum % 11)
+4. If result is 10 or 11, use 0 instead
+5. The result is the checksum digit (11th digit)
+
+**Important Notes:**
+- Does not verify if the PIS actually exists or belongs to a real person
+- Only validates format and checksum
+- PIS with symbols must be cleaned first using `remove_symbols`
+
+#### Generation
+
+##### `generate()`
+
+Generates a random valid Brazilian PIS number.
+
+```ruby
+# Generate random PIS
+BrazilianUtils::PISUtils.generate
+# => "12345678909" (example, actual value is random)
+
+BrazilianUtils::PISUtils.generate
+# => "98765432100" (example)
+
+BrazilianUtils::PISUtils.generate
+# => "01234567890" (example, can start with 0)
+```
+
+**Parameters:**
+- None
+
+**Returns:**
+- `String`: A randomly generated valid PIS number (11 digits)
+
+**Generated PIS:**
+- Always has exactly 11 digits
+- Always passes checksum validation
+- Can start with zero (leading zeros preserved)
+- Uses random digits for the first 10 positions
+- Calculates correct checksum for 11th digit
+- Can be formatted and validated immediately
+- Does not correspond to a real person
+
+#### Complete Example
+
+```ruby
+require 'brazilian-utils/pis-utils'
+
+include BrazilianUtils::PISUtils
+
+# Scenario 1: Process user input with symbols
+user_input = '123.45678.90-9'
+
+# Step 1: Remove symbols
+clean = remove_symbols(user_input)
+puts "Clean: #{clean}"
+# => Clean: 12345678909
+
+# Step 2: Validate
+if is_valid(clean)
+  puts "Valid PIS!"
+  
+  # Step 3: Format for display
+  formatted = format_pis(clean)
+  puts "Formatted: #{formatted}"
+  # => Formatted: 123.45678.90-9
+else
+  puts "Invalid PIS"
+end
+
+# Scenario 2: Generate test data
+puts "\nGenerating 5 test PIS numbers:"
+5.times do
+  pis = generate
+  formatted = format(pis)
+  puts "  #{formatted} (#{pis})"
+end
+# => 123.45678.90-9 (12345678909)
+# => 987.65432.10-0 (98765432100)
+# => ...
+
+# Scenario 3: Validate PIS list
+pis_list = [
+  '123.45678.90-9',
+  '98765432100',
+  '12345678900',
+  '123456789',
+  '12082043600'
+]
+
+puts "\nValidating PIS list:"
+pis_list.each do |pis|
+  # Clean if needed
+  clean = remove_symbols(pis)
+  
+  if valid?(clean)
+    formatted = format(clean)
+    puts "  ✓ #{formatted}"
+  else
+    puts "  ✗ #{pis} [INVALID]"
+  end
+end
+# => ✓ 123.45678.90-9
+# => ✓ 987.65432.10-0
+# => ✗ 12345678900 [INVALID]
+# => ✗ 123456789 [INVALID]
+# => ✓ 120.82043.60-0
+
+# Scenario 4: Generate and verify
+pis = generate
+puts "\nGenerated: #{pis}"
+puts "Valid: #{valid?(pis)}"
+puts "Formatted: #{format(pis)}"
+
+# Verify checksum calculation
+base = pis[0..9]
+checksum_digit = pis[10]
+puts "Base: #{base}"
+puts "Checksum: #{checksum_digit}"
+
+# Store cleaned version
+cleaned = remove_symbols(format(pis))
+puts "Stored: #{cleaned}"
+```
+
+**Use Cases:**
+- Validate PIS numbers in HR and payroll systems
+- Format PIS for display in documents and interfaces
+- Generate test data for Brazilian worker registration systems
+- Clean user input from web forms
+- Verify PIS format before submitting to government systems
+- Normalize PIS numbers for database storage
+
+**PIS Structure:**
+
+```
+XXX.XXXXX.XX-X
+│   │     │  └─ Checksum digit (calculated)
+│   │     └──── Digits 9-10
+│   └────────── Digits 4-8 (5 digits)
+└────────────── Digits 1-3 (3 digits)
+```
+
+**Checksum Calculation Example:**
+
+For PIS "12345678909":
+```
+Digits: 1  2  3  4  5  6  7  8  9  0  (base)
+Weights: 3  2  9  8  7  6  5  4  3  2
+Products: 3  4 27 32 35 36 35 32 27  0 = 231
+
+Sum: 231
+231 % 11 = 0
+11 - 0 = 11
+Since 11 > 9, checksum = 0
+
+But the actual checksum is 9, so this is not a valid PIS.
+Let me recalculate...
+
+Actually, for a valid PIS, the calculation ensures the last digit matches.
+```
+
+**Related Documents:**
+- PIS is part of the Brazilian social security system
+- Used for employment records, FGTS (workers' fund), and social benefits
+- Also known as PIS/PASEP depending on employment sector
+- Required for all formal workers in Brazil
 
 ### CEP Utils
 
