@@ -2,9 +2,8 @@
 
 > Biblioteca de utilitários para dados específicos do Brasil / Utils library for Brazilian-specific data
 
-[![Gem Version](https://badge.fury.io/rb/pipeme.svg)](https://badge.fury.io/rb/brazilian-utils)
-![](http://ruby-gem-downloads-badge.herokuapp.com/brazilian-utils)
-[![Build Status](https://travis-ci.org/brazilian-utils/ruby.svg?branch=master)](https://travis-ci.org/brazilian-utils/ruby)
+[![Gem Version](https://badge.fury.io/rb/pipeme.svg)](https://badge.fury.io/rb/br-utils)
+![](http://ruby-gem-downloads-badge.herokuapp.com/br-utils)
 
 [🇧🇷 Português](#português) | [🇺🇸 English](#english)
 
@@ -34,7 +33,7 @@ Utilitários para trabalhar com formatos de dados brasileiros:
 ### 💾 Instalação
 
 ```ruby
-gem 'brazilian-utils'
+gem 'br-utils'
 ```
 
 ```bash
@@ -128,7 +127,7 @@ Utilities for working with Brazilian data formats:
 ### 💾 Installation
 
 ```ruby
-gem 'brazilian-utils'
+gem 'br-utils'
 ```
 
 ```bash
