@@ -1,14 +1,25 @@
 module BrazilianUtils
   module EmailUtils
-    # Email validation pattern based on RFC 5322
-    # This pattern validates:
-    # - Email must not start with a dot
-    # - Local part (before @): alphanumeric, dots, underscores, percent, plus, minus
-    # - @ symbol required
-    # - Domain part: alphanumeric, dots, hyphens
-    # - Dot separator required
-    # - TLD: at least 2 alphabetic characters
-    EMAIL_PATTERN = /\A(?![.])[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\z/.freeze
+    # Email validation pattern based on RFC 5322/RFC 1035.
+    #
+    # This is stricter than brutils/python's reference regex
+    # (`^(?![.])[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`), which lets
+    # through addresses with a leading/trailing/doubled dot in the local
+    # part, or a domain label starting/ending with a hyphen. Each dot-joined
+    # segment is validated on its own:
+    # - Local part: one or more non-empty segments (letters, digits,
+    #   `._%+-`) joined by single dots - no leading/trailing/consecutive dot
+    # - Domain labels: alphanumeric, may contain internal hyphens, but must
+    #   not start or end with one (RFC 1035 "preferred name syntax")
+    # - TLD: at least 2 letters, no digits or hyphens
+    EMAIL_PATTERN = %r{
+      \A
+      [a-zA-Z0-9_%+-]+ (?: \. [a-zA-Z0-9_%+-]+ )*                # local part
+      @
+      (?: [a-zA-Z0-9] (?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])? \. )+   # domain labels
+      [a-zA-Z]{2,63}                                             # TLD
+      \z
+    }x.freeze
 
     # Checks if a string corresponds to a valid email address.
     #

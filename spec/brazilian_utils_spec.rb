@@ -197,10 +197,14 @@ describe BrazilianUtils::CPFUtils do
       end
     end
 
-    it 'generated CPF does not start with 0' do
-      # Since we use rand(1..999_999_998), it should never be all zeros
+    it 'generated CPF base is never all zeros' do
+      # rand(1..999_999_998) only guarantees the 9-digit base isn't
+      # "000000000" - it can still start with a '0' (e.g. base 5 becomes
+      # "000000005"), same as brutils/python's identical
+      # str(randint(1, 999999998)).zfill(9), so that's not a valid
+      # invariant to assert on the first digit.
       cpf = BrazilianUtils::CPFUtils.generate
-      expect(cpf[0]).not_to eq('0')
+      expect(cpf[0..8]).not_to eq('000000000')
     end
   end
 

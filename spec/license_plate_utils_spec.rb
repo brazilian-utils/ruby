@@ -15,32 +15,37 @@ RSpec.describe BrazilianUtils::LicensePlateUtils do
         expect(described_class.convert_to_mercosul('ABC1000')).to eq('ABC1A00')
       end
 
-      it 'converts ABC2345 to Mercosul format (2→C)' do
-        expect(described_class.convert_to_mercosul('ABC2345')).to eq('ABC2C45')
+      # The letter replaces the *5th character* (index 4 - the 2nd digit of
+      # the old plate), not the 1st digit right after the letters; these
+      # titles/expectations were off by one digit. Cross-checked against
+      # brutils/python's own docstring example (convert("ABC4567") ==
+      # "ABC4F67", i.e. the '5' at index 4 maps to 'F').
+      it 'converts ABC2345 to Mercosul format (3→D)' do
+        expect(described_class.convert_to_mercosul('ABC2345')).to eq('ABC2D45')
       end
 
-      it 'converts ABC3456 to Mercosul format (3→D)' do
-        expect(described_class.convert_to_mercosul('ABC3456')).to eq('ABC3D56')
+      it 'converts ABC3456 to Mercosul format (4→E)' do
+        expect(described_class.convert_to_mercosul('ABC3456')).to eq('ABC3E56')
       end
 
-      it 'converts ABC4567 to Mercosul format (4→E)' do
-        expect(described_class.convert_to_mercosul('ABC4567')).to eq('ABC4E67')
+      it 'converts ABC4567 to Mercosul format (5→F)' do
+        expect(described_class.convert_to_mercosul('ABC4567')).to eq('ABC4F67')
       end
 
-      it 'converts ABC5678 to Mercosul format (5→F)' do
-        expect(described_class.convert_to_mercosul('ABC5678')).to eq('ABC5F78')
+      it 'converts ABC5678 to Mercosul format (6→G)' do
+        expect(described_class.convert_to_mercosul('ABC5678')).to eq('ABC5G78')
       end
 
-      it 'converts ABC6789 to Mercosul format (6→G)' do
-        expect(described_class.convert_to_mercosul('ABC6789')).to eq('ABC6G89')
+      it 'converts ABC6789 to Mercosul format (7→H)' do
+        expect(described_class.convert_to_mercosul('ABC6789')).to eq('ABC6H89')
       end
 
-      it 'converts ABC7890 to Mercosul format (7→H)' do
-        expect(described_class.convert_to_mercosul('ABC7890')).to eq('ABC7H90')
+      it 'converts ABC7890 to Mercosul format (8→I)' do
+        expect(described_class.convert_to_mercosul('ABC7890')).to eq('ABC7I90')
       end
 
-      it 'converts ABC8901 to Mercosul format (8→I)' do
-        expect(described_class.convert_to_mercosul('ABC8901')).to eq('ABC8I01')
+      it 'converts ABC8901 to Mercosul format (9→J)' do
+        expect(described_class.convert_to_mercosul('ABC8901')).to eq('ABC8J01')
       end
 
       it 'converts ABC9999 to Mercosul format (9→J)' do
@@ -60,7 +65,7 @@ RSpec.describe BrazilianUtils::LicensePlateUtils do
       end
 
       it 'converts XYZ9876 correctly' do
-        expect(described_class.convert_to_mercosul('XYZ9876')).to eq('XYZ9J76')
+        expect(described_class.convert_to_mercosul('XYZ9876')).to eq('XYZ9I76')
       end
     end
 

@@ -153,8 +153,10 @@ RSpec.describe BrazilianUtils::RENAVAMUtils do
     end
 
     it 'generates valid DV for various bases' do
+      # '0000000000' is deliberately excluded: its DV also computes to 0,
+      # producing an all-same-digit RENAVAM ('00000000000'), which
+      # validate_renavam_format rejects by design (matches brutils/python).
       test_bases = [
-        '0000000000',
         '1234567890',
         '9876543210',
         '5555555550',
@@ -288,8 +290,11 @@ RSpec.describe BrazilianUtils::RENAVAMUtils do
     it 'validates multiple known RENAVAMs' do
       # Generate several valid RENAVAMs and verify
       valid_rehavams = []
-      
-      10.times do |i|
+
+      # Start at i=1: i=0 gives base '0000000000', whose DV is also 0,
+      # producing an all-same-digit RENAVAM that validate_renavam_format
+      # rejects by design (matches brutils/python).
+      (1..10).each do |i|
         base = (i * 1234567890).to_s.rjust(10, '0')[0..9]
         dv = described_class.send(:calculate_renavam_dv, base + '0')
         renavam = base + dv.to_s
@@ -323,11 +328,14 @@ RSpec.describe BrazilianUtils::RENAVAMUtils do
 
   describe 'comprehensive validation tests' do
     it 'validates 100 calculated RENAVAMs' do
-      100.times do |i|
+      # Start at i=1: i=0 gives base '0000000000', whose DV is also 0,
+      # producing an all-same-digit RENAVAM that validate_renavam_format
+      # rejects by design (matches brutils/python).
+      (1..100).each do |i|
         base = i.to_s.rjust(10, '0')
         dv = described_class.send(:calculate_renavam_dv, base + '0')
         renavam = base + dv.to_s
-        
+
         expect(described_class.is_valid_renavam(renavam)).to be true
       end
     end

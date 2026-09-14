@@ -36,9 +36,11 @@ module BrazilianUtils
     #   convert_to_mercosul("ABC4*67")
     #   #=> nil
     def self.convert_to_mercosul(license_plate)
-      return nil unless valid_old_format?(license_plate)
+      return nil unless license_plate.is_a?(String)
 
       clean = remove_symbols(license_plate).upcase
+      return nil unless valid_old_format?(clean)
+
       chars = clean.chars
       
       # Convert the 5th character (index 4) - the first digit after the letters
@@ -223,6 +225,8 @@ module BrazilianUtils
     #   generate('invalid')
     #   #=> nil
     def self.generate(format = 'LLLNLNN')
+      return nil unless format.is_a?(String)
+
       format_upper = format.upcase
 
       return nil unless ['LLLNLNN', 'LLLNNNN'].include?(format_upper)

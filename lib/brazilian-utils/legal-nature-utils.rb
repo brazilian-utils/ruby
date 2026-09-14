@@ -39,7 +39,7 @@ module BrazilianUtils
       '2046' => 'Sociedade Anônima Aberta',
       '2054' => 'Sociedade Anônima Fechada',
       '2062' => 'Sociedade Empresária Limitada',
-      '2070' => 'Sociedade Empresária em Nome Coletivo',
+      '2076' => 'Sociedade Empresária em Nome Coletivo',
       '2089' => 'Sociedade Empresária em Comandita Simples',
       '2097' => 'Sociedade Empresária em Comandita por Ações',
       '2100' => 'Sociedade Mercantil de Capital e Indústria (extinta pelo NCC/2002)',
@@ -177,7 +177,7 @@ module BrazilianUtils
     #   #=> "Sociedade Empresária Limitada"
     #
     #   all_codes.size
-    #   #=> 64 (total number of codes in the official table)
+    #   #=> 60 (total number of codes in the official table)
     def self.list_all
       LEGAL_NATURE.dup
     end

@@ -131,8 +131,11 @@ RSpec.describe BrazilianUtils::LegalNatureUtils do
         expect(described_class.is_valid('    ')).to be false
       end
 
-      it 'rejects code with spaces in the middle' do
-        expect(described_class.is_valid('20 62')).to be false
+      it 'normalizes spaces just like it normalizes hyphens' do
+        # normalize/_normalize strips every non-digit character (matches
+        # brutils/python's own `_normalize`, which is how "206-2" is
+        # accepted in the first place), so a space behaves the same way.
+        expect(described_class.is_valid('20 62')).to be true
       end
     end
 
@@ -269,8 +272,9 @@ RSpec.describe BrazilianUtils::LegalNatureUtils do
     end
 
     it 'returns all legal nature codes' do
+      # 60 codes, matching brutils/python's canonical LEGAL_NATURE table.
       all_codes = described_class.list_all
-      expect(all_codes.size).to eq(64)
+      expect(all_codes.size).to eq(60)
     end
 
     it 'includes known codes' do

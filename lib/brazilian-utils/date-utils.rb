@@ -149,6 +149,7 @@ module BrazilianUtils
     #   convert_date_to_text("15/03/2024")  #=> "Quinze de março de dois mil e vinte e quatro"
     #   convert_date_to_text("invalid")     #=> nil
     def self.convert_date_to_text(date)
+      return nil unless date.is_a?(String)
       return nil unless DATE_REGEX.match?(date)
 
       begin

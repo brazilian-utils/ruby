@@ -45,16 +45,19 @@ RSpec.describe BrazilianUtils::PISUtils do
 
   describe '.format_pis' do
     context 'when formatting valid PIS numbers' do
-      it 'formats 12345678909' do
-        expect(described_class.format_pis('12345678909')).to eq('123.45678.90-9')
+      # Fixtures below are genuinely valid per the weighted checksum
+      # (3,2,9,8,7,6,5,4,3,2), cross-checked against brutils/python's
+      # canonical PIS test vectors.
+      it 'formats 12038619494' do
+        expect(described_class.format_pis('12038619494')).to eq('120.38619.49-4')
       end
 
-      it 'formats 98765432100' do
-        expect(described_class.format_pis('98765432100')).to eq('987.65432.10-0')
+      it 'formats 12016784018' do
+        expect(described_class.format_pis('12016784018')).to eq('120.16784.01-8')
       end
 
       it 'formats PIS starting with 0' do
-        expect(described_class.format_pis('01234567890')).to eq('012.34567.89-0')
+        expect(described_class.format_pis('01234567897')).to eq('012.34567.89-7')
       end
 
       it 'formats PIS with all same digits except checksum' do
@@ -68,7 +71,9 @@ RSpec.describe BrazilianUtils::PISUtils do
 
     context 'when formatting fails' do
       it 'returns nil for invalid PIS' do
-        expect(described_class.format_pis('12345678900')).to be_nil
+        # Same base as the valid '12038619494' fixture, off by one digit
+        # (matches brutils/python's own known-invalid checksum example).
+        expect(described_class.format_pis('12038619493')).to be_nil
       end
 
       it 'returns nil for too short PIS' do
@@ -97,31 +102,31 @@ RSpec.describe BrazilianUtils::PISUtils do
     end
 
     it 'has an alias method .format' do
-      expect(described_class.format('12345678909')).to eq('123.45678.90-9')
+      expect(described_class.format('12038619494')).to eq('120.38619.49-4')
     end
   end
 
   describe '.is_valid' do
     context 'when validating valid PIS numbers' do
-      it 'validates 12345678909' do
-        expect(described_class.is_valid('12345678909')).to be true
+      it 'validates 12038619494' do
+        expect(described_class.is_valid('12038619494')).to be true
       end
 
-      it 'validates 98765432100' do
-        expect(described_class.is_valid('98765432100')).to be true
+      it 'validates 12016784018' do
+        expect(described_class.is_valid('12016784018')).to be true
       end
 
       it 'validates PIS starting with 0' do
-        expect(described_class.is_valid('01234567890')).to be true
+        expect(described_class.is_valid('01234567897')).to be true
       end
 
       it 'validates PIS with checksum 0' do
-        expect(described_class.is_valid('98765432100')).to be true
+        expect(described_class.is_valid('12345678900')).to be true
       end
 
       # Testing with known valid PIS numbers
-      it 'validates known valid PIS 12082043600' do
-        expect(described_class.is_valid('12082043600')).to be true
+      it 'validates known valid PIS 12083210826' do
+        expect(described_class.is_valid('12083210826')).to be true
       end
 
       it 'validates known valid PIS 17033259504' do
@@ -139,11 +144,11 @@ RSpec.describe BrazilianUtils::PISUtils do
 
     context 'when validation fails' do
       it 'rejects PIS with wrong checksum' do
-        expect(described_class.is_valid('12345678900')).to be false
+        expect(described_class.is_valid('12038619493')).to be false
       end
 
       it 'rejects PIS with wrong checksum (last digit off by 1)' do
-        expect(described_class.is_valid('12345678908')).to be false
+        expect(described_class.is_valid('12016784019')).to be false
       end
 
       it 'rejects too short PIS' do
@@ -182,8 +187,9 @@ RSpec.describe BrazilianUtils::PISUtils do
         expect(described_class.is_valid(12345678909)).to be false
       end
 
-      it 'rejects all zeros' do
-        expect(described_class.is_valid('00000000000')).to be false
+      it 'accepts all zeros (the weighted checksum happens to match; PIS has ' \
+         'no repeated-digit rule like CPF/CNPJ do - matches brutils/python)' do
+        expect(described_class.is_valid('00000000000')).to be true
       end
 
       it 'rejects all ones' do
@@ -196,7 +202,7 @@ RSpec.describe BrazilianUtils::PISUtils do
     end
 
     it 'has an alias method .valid?' do
-      expect(described_class.valid?('12345678909')).to be true
+      expect(described_class.valid?('12038619494')).to be true
     end
   end
 
@@ -280,7 +286,7 @@ RSpec.describe BrazilianUtils::PISUtils do
     end
 
     it 'validates formatted PIS after cleaning' do
-      formatted_pis = '987.65432.10-0'
+      formatted_pis = '120.38619.49-4'
       
       # Clean
       clean = described_class.remove_symbols(formatted_pis)
@@ -294,7 +300,7 @@ RSpec.describe BrazilianUtils::PISUtils do
     end
 
     it 'handles invalid formatted PIS' do
-      invalid_formatted = '123.45678.90-0'
+      invalid_formatted = '120.38619.49-3'
       
       # Clean
       clean = described_class.remove_symbols(invalid_formatted)
