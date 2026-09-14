@@ -80,19 +80,19 @@ RSpec.describe BrazilianUtils::LegalProcessUtils do
   describe '.is_valid' do
     context 'with valid legal process IDs' do
       it 'validates a known valid ID' do
-        expect(described_class.is_valid('68476506020233030000')).to be true
+        expect(described_class.is_valid('68476506120233030000')).to be true
       end
 
       it 'validates another known valid ID' do
-        expect(described_class.is_valid('51808233620233030000')).to be true
+        expect(described_class.is_valid('51808233720233030000')).to be true
       end
 
       it 'validates formatted ID' do
-        expect(described_class.is_valid('6847650-60.2023.3.03.0000')).to be true
+        expect(described_class.is_valid('6847650-61.2023.3.03.0000')).to be true
       end
 
       it 'validates another formatted ID' do
-        expect(described_class.is_valid('5180823-36.2023.3.03.0000')).to be true
+        expect(described_class.is_valid('5180823-37.2023.3.03.0000')).to be true
       end
     end
 
@@ -150,8 +150,9 @@ RSpec.describe BrazilianUtils::LegalProcessUtils do
         oooo = '0000'
         
         base = nnnnnnn + year + orgao + tr + oooo
-        # Calculate expected checksum: 97 - ((base * 100) % 97)
-        checksum = (97 - ((base.to_i * 100) % 97)).to_s.rjust(2, '0')
+        # Calculate expected checksum (CNJ Res. 65/2008, ISO 7064 MOD 97-10):
+        # 98 - ((base * 100) % 97)
+        checksum = (98 - ((base.to_i * 100) % 97)).to_s.rjust(2, '0')
         
         id = "#{nnnnnnn}#{checksum}#{year}#{orgao}#{tr}#{oooo}"
         expect(described_class.is_valid(id)).to be true
@@ -171,7 +172,7 @@ RSpec.describe BrazilianUtils::LegalProcessUtils do
     end
 
     it 'works the same as is_valid with valid ID' do
-      expect(described_class.valid?('68476506020233030000')).to be true
+      expect(described_class.valid?('68476506120233030000')).to be true
     end
 
     it 'works the same as is_valid with invalid ID' do
@@ -337,13 +338,13 @@ RSpec.describe BrazilianUtils::LegalProcessUtils do
 
     it 'validates real-world example' do
       # Known valid IDs from Python implementation
-      expect(described_class.valid?('68476506020233030000')).to be true
-      expect(described_class.valid?('51808233620233030000')).to be true
+      expect(described_class.valid?('68476506120233030000')).to be true
+      expect(described_class.valid?('51808233720233030000')).to be true
     end
 
     it 'formats real-world example' do
-      formatted = described_class.format_legal_process('68476506020233030000')
-      expect(formatted).to eq('6847650-60.2023.3.03.0000')
+      formatted = described_class.format_legal_process('68476506120233030000')
+      expect(formatted).to eq('6847650-61.2023.3.03.0000')
     end
 
     it 'complete workflow: generate, format, validate' do
@@ -381,7 +382,7 @@ RSpec.describe BrazilianUtils::LegalProcessUtils do
     end
 
     it 'validates formatted ID with extra spaces (should fail)' do
-      expect(described_class.valid?('6847650-60.2023.3.03.0000 ')).to be false
+      expect(described_class.valid?('6847650-61.2023.3.03.0000 ')).to be false
     end
 
     it 'validates ID with lowercase letters (should fail)' do

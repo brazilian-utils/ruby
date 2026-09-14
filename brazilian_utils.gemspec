@@ -16,6 +16,11 @@ Gem::Specification.new do |spec|
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) || f.match(%r{\.gemspec$}) }
   spec.require_paths = ["lib"]
 
+  # bigdecimal stopped being a default gem in Ruby 3.4; currency-utils.rb
+  # requires it directly, so it must be declared or bundler/Ruby 3.4+ raises
+  # LoadError on `require 'bigdecimal'`.
+  spec.add_dependency "bigdecimal"
+
   spec.add_development_dependency "bundler", "~> 2.4"
   spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency "rspec", "~> 3.12"

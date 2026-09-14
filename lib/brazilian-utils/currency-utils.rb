@@ -42,7 +42,7 @@ module BrazilianUtils
     #
     # @example
     #   convert_real_to_text(1523.45)
-    #   #=> "Mil, quinhentos e vinte e três reais e quarenta e cinco centavos"
+    #   #=> "Mil quinhentos e vinte e três reais e quarenta e cinco centavos"
     #
     #   convert_real_to_text(1.00)
     #   #=> "Um real"
@@ -72,7 +72,10 @@ module BrazilianUtils
       if reais > 0
         reais_text = number_to_words(reais)
         currency_text = reais == 1 ? 'real' : 'reais'
-        conector = reais_text.match?(/lhão|lhões$/) ? 'de ' : ''
+        # "de" only applies when the text ends in "milhão(ões)"/"bilhão(ões)"/...
+        # on its own (e.g. "um milhão de reais"), not when it's followed by
+        # more words (e.g. "um milhão e um reais", no "de").
+        conector = reais_text.match?(/lhão$|lhões$/) ? 'de ' : ''
         parts << "#{reais_text} #{conector}#{currency_text}"
       end
       
@@ -104,8 +107,9 @@ module BrazilianUtils
     #
     # @private
     def self.number_to_words(number)
+      number = number.to_i.abs
       return 'zero' if number.zero?
-      
+
       # Scale names
       scales = [
         '',
@@ -115,7 +119,7 @@ module BrazilianUtils
         'trilhão',
         'quadrilhão'
       ]
-      
+
       scales_plural = [
         '',
         'mil',
@@ -124,49 +128,47 @@ module BrazilianUtils
         'trilhões',
         'quadrilhões'
       ]
-      
-      # Break number into groups of 3 digits
+
+      # Break number into groups of 3 digits, lowest order first
+      # (groups[0] is units-hundreds, groups[1] is thousands, ...)
       groups = []
       temp = number
       while temp > 0
         groups << temp % 1000
         temp /= 1000
       end
-      
-      result = []
+
+      parts = []
       groups.each_with_index do |group, index|
         next if group.zero?
-        
+
         group_text = convert_group(group)
         scale_name = group == 1 ? scales[index] : scales_plural[index]
-        
-        if scale_name.empty?
-          result << group_text
-        elsif index == 1 # "mil" doesn't need number before if it's exactly 1000
-          if group == 1
-            result << scale_name
-          else
-            result << "#{group_text} #{scale_name}"
-          end
-        else
-          result << "#{group_text} #{scale_name}"
-        end
+
+        parts << if scale_name.empty?
+                   group_text
+                 elsif index == 1 && group == 1 # "mil" doesn't need "um" before it
+                   scale_name
+                 else
+                   "#{group_text} #{scale_name}"
+                 end
       end
-      
-      # Join with "e" where appropriate
-      if result.length > 1
-        last = result.pop
-        result_text = result.reverse.join(', ')
-        
-        # Check if we need "e" before the last part
-        if number % 1000 < 100 && number % 1000 > 0
-          "#{result_text} e #{last}"
-        else
-          "#{result_text}, #{last}"
-        end
-      else
-        result.first || 'zero'
-      end
+
+      # parts was built lowest-order group first; the spoken form reads
+      # highest order first (e.g. "mil duzentos e trinta e quatro", not
+      # "duzentos e trinta e quatro, mil").
+      parts.reverse!
+      return parts.first if parts.length == 1
+
+      # The lowest-order non-zero group (spoken last) gets an "e" in front
+      # when it reads as a single small/round term: below 100, or an exact
+      # multiple of 100 (e.g. "mil e quatrocentos", "mil e um"); otherwise
+      # groups are simply concatenated with a space, no comma
+      # (Manual de Redação da Presidência: "mil duzentos e cinquenta reais").
+      final_group = groups.find { |g| !g.zero? }
+      last = parts.pop
+      separator = (final_group < 100 || (final_group % 100).zero?) ? ' e ' : ' '
+      "#{parts.join(' ')}#{separator}#{last}"
     end
 
     # Converts a group of 3 digits (0-999) to words.

@@ -381,7 +381,7 @@ RSpec.describe BrazilianUtils::PhoneUtils do
       end
 
       it 'removes +55 from phone with country code' do
-        expect(described_class.remove_international_dialing_code('+5511994029275')).to eq('+11994029275')
+        expect(described_class.remove_international_dialing_code('+5511994029275')).to eq('11994029275')
       end
 
       it 'removes 55 from landline with country code' do
@@ -389,7 +389,7 @@ RSpec.describe BrazilianUtils::PhoneUtils do
       end
 
       it 'removes +55 from landline with country code' do
-        expect(described_class.remove_international_dialing_code('+551635014415')).to eq('+1635014415')
+        expect(described_class.remove_international_dialing_code('+551635014415')).to eq('1635014415')
       end
 
       it 'removes only first occurrence of 55' do

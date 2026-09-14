@@ -32,41 +32,41 @@ module BrazilianUtils
       first_verificator = digits[9]
       second_verificator = digits[10]
 
-      # Check the 10th digit
-      return false unless check_first_verificator(digits, first_verificator)
+      # Check the 10th digit; keep the raw remainder (0-10), since the
+      # decrement applied to the 11th digit depends on whether the *pre-cap*
+      # remainder overflowed (>9), not on the printed digit (always 0-9).
+      first_rest = calculate_first_rest(digits)
+      expected_first = first_rest > 9 ? 0 : first_rest
+      return false unless expected_first == first_verificator
 
       # Check the 11th digit
-      check_second_verificator(digits, second_verificator, first_verificator)
+      check_second_verificator(digits, second_verificator, first_rest)
     end
 
-    # Generates the first verification digit and uses it to verify the 10th digit of the CNH
+    # Computes the raw remainder used to derive the CNH's first verification digit.
     #
     # @param digits [Array<Integer>] Array of CNH digits
-    # @param first_verificator [Integer] The first verification digit (10th digit)
-    # @return [Boolean] true if the first verificator is valid
+    # @return [Integer] The remainder (0-10) before capping to a single printable digit
     #
     # @private
-    def self.check_first_verificator(digits, first_verificator)
+    def self.calculate_first_rest(digits)
       sum = 0
       9.times do |i|
         sum += digits[i] * (9 - i)
       end
 
-      sum = sum % 11
-      result = sum > 9 ? 0 : sum
-
-      result == first_verificator
+      sum % 11
     end
 
     # Generates the second verification digit and uses it to verify the 11th digit of the CNH
     #
     # @param digits [Array<Integer>] Array of CNH digits
     # @param second_verificator [Integer] The second verification digit (11th digit)
-    # @param first_verificator [Integer] The first verification digit (10th digit)
+    # @param first_rest [Integer] The raw remainder (0-10) used to compute the 10th digit
     # @return [Boolean] true if the second verificator is valid
     #
     # @private
-    def self.check_second_verificator(digits, second_verificator, first_verificator)
+    def self.check_second_verificator(digits, second_verificator, first_rest)
       sum = 0
       9.times do |i|
         sum += digits[i] * (i + 1)
@@ -74,7 +74,7 @@ module BrazilianUtils
 
       result = sum % 11
 
-      if first_verificator > 9
+      if first_rest > 9
         result = (result - 2).negative? ? result + 9 : result - 2
       end
 
@@ -83,6 +83,6 @@ module BrazilianUtils
       result == second_verificator
     end
 
-    private_class_method :check_first_verificator, :check_second_verificator
+    private_class_method :calculate_first_rest, :check_second_verificator
   end
 end

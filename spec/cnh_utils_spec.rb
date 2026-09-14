@@ -4,24 +4,24 @@ describe BrazilianUtils::CNHUtils do
   describe '.valid?' do
     context 'with valid CNH' do
       it 'validates CNH with correct format and verification digits' do
-        expect(BrazilianUtils::CNHUtils.valid?('98765432100')).to be true
+        expect(BrazilianUtils::CNHUtils.valid?('98765432109')).to be true
       end
 
       it 'validates CNH with symbols (ignores them)' do
-        expect(BrazilianUtils::CNHUtils.valid?('987654321-00')).to be true
+        expect(BrazilianUtils::CNHUtils.valid?('987654321-09')).to be true
       end
 
       it 'validates CNH with spaces and dots' do
-        expect(BrazilianUtils::CNHUtils.valid?('987.654.321-00')).to be true
+        expect(BrazilianUtils::CNHUtils.valid?('987.654.321-09')).to be true
       end
 
       # Additional valid CNHs for thorough testing
       it 'validates multiple valid CNH formats' do
         valid_cnhs = [
-          '98765432100',
-          '987654321-00',
-          '987.654.321-00',
-          '98765432100'
+          '98765432109',
+          '987654321-09',
+          '987.654.321-09',
+          '98765432109'
         ]
 
         valid_cnhs.each do |cnh|
@@ -81,12 +81,12 @@ describe BrazilianUtils::CNHUtils do
 
     context 'edge cases' do
       it 'handles CNH as integer' do
-        expect(BrazilianUtils::CNHUtils.valid?(98765432100)).to be true
+        expect(BrazilianUtils::CNHUtils.valid?(98765432109)).to be true
       end
 
       it 'handles CNH with various separators' do
-        expect(BrazilianUtils::CNHUtils.valid?('987 654 321 00')).to be true
-        expect(BrazilianUtils::CNHUtils.valid?('987/654/321-00')).to be true
+        expect(BrazilianUtils::CNHUtils.valid?('987 654 321 09')).to be true
+        expect(BrazilianUtils::CNHUtils.valid?('987/654/321-09')).to be true
       end
 
       it 'rejects CNH with correct length but wrong verification digits' do
@@ -99,13 +99,13 @@ describe BrazilianUtils::CNHUtils do
       it 'correctly validates first verification digit' do
         # This tests the first verificator logic specifically
         # Using known valid CNH
-        expect(BrazilianUtils::CNHUtils.valid?('98765432100')).to be true
+        expect(BrazilianUtils::CNHUtils.valid?('98765432109')).to be true
       end
 
       it 'correctly validates second verification digit' do
         # This tests the second verificator logic specifically
         # Using known valid CNH
-        expect(BrazilianUtils::CNHUtils.valid?('98765432100')).to be true
+        expect(BrazilianUtils::CNHUtils.valid?('98765432109')).to be true
       end
 
       it 'rejects when only first digit is wrong' do
@@ -116,6 +116,15 @@ describe BrazilianUtils::CNHUtils do
       it 'rejects when only second digit is wrong' do
         # These would fail the second verificator check
         expect(BrazilianUtils::CNHUtils.valid?('98765432101')).to be false
+      end
+
+      it 'applies the 2nd-digit decrement when the 1st digit remainder is 10' do
+        # For base 987654321, sum(9..1 weights) mod 11 == 10, so the printed
+        # first digit is capped to 0, but the *raw* remainder (10) still
+        # triggers the DSC=2 decrement on the second digit's calculation
+        # (98765432100 looks superficially plausible but is NOT valid).
+        expect(BrazilianUtils::CNHUtils.valid?('98765432100')).to be false
+        expect(BrazilianUtils::CNHUtils.valid?('98765432109')).to be true
       end
     end
   end

@@ -118,7 +118,7 @@ describe BrazilianUtils::CurrencyUtils do
 
       it 'converts 1523.45 to text' do
         result = BrazilianUtils::CurrencyUtils.convert_real_to_text(1523.45)
-        expect(result).to eq('Mil, quinhentos e vinte e três reais e quarenta e cinco centavos')
+        expect(result).to eq('Mil quinhentos e vinte e três reais e quarenta e cinco centavos')
       end
 
       it 'converts 2.01 to text' do
@@ -238,7 +238,7 @@ describe BrazilianUtils::CurrencyUtils do
       text = BrazilianUtils::CurrencyUtils.convert_real_to_text(value)
       
       expect(formatted).to eq('R$ 1.234,56')
-      expect(text).to include('mil')
+      expect(text.downcase).to include('mil')
       expect(text).to include('reais')
       expect(text).to include('centavos')
     end

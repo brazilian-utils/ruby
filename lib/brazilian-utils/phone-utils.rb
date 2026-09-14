@@ -181,9 +181,17 @@ module BrazilianUtils
     def self.remove_international_dialing_code(phone_number)
       return '' unless phone_number.is_a?(String)
 
-      # Check if pattern matches and length (without spaces) is > 11
-      if INTERNATIONAL_CODE_PATTERN.match?(phone_number) && phone_number.gsub(' ', '').length > 11
-        phone_number.sub('55', '')
+      # Only touch a "clean" digit string (with an optional leading '+') that
+      # is longer than 11 digits; anything with spaces/hyphens/etc. is left
+      # alone rather than partially stripped.
+      digits_part = phone_number.sub(/\A\+/, '')
+
+      if INTERNATIONAL_CODE_PATTERN.match?(phone_number) &&
+         digits_part.match?(/\A\d+\z/) && digits_part.length > 11
+        # Anchor to the start so only the leading "+55"/"55" is stripped
+        # (a plain #sub would also drop the '+' and could hit an unrelated
+        # "55" further into the number, e.g. an RS-state "55" DDD).
+        phone_number.sub(/\A\+?55/, '')
       else
         phone_number
       end

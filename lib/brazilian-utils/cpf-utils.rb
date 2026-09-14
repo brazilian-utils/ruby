@@ -161,7 +161,7 @@ module BrazilianUtils
     #
     # @private
     def self.hashdigit(cpf, position)
-      val = cpf.chars.zip(position.downto(2)).sum do |digit, weight|
+      val = cpf.chars.first(position - 1).zip(position.downto(2)).sum do |digit, weight|
         digit.to_i * weight
       end % 11
 

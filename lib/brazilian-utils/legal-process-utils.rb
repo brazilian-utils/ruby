@@ -177,7 +177,9 @@ module BrazilianUtils
 
     # Calculates the checksum (verification digits) for a legal process ID.
     #
-    # The checksum is calculated as: 97 - ((basenum * 100) % 97), padded to 2 digits.
+    # The checksum is calculated as: 98 - ((basenum * 100) % 97), padded to 2 digits.
+    # This is the ISO 7064 MOD 97-10 check digit used by CNJ Resolution 65/2008,
+    # art. 1º, § 2º.
     #
     # @param basenum [Integer] The base number for checksum calculation
     #   (without the verification digits)
@@ -186,7 +188,7 @@ module BrazilianUtils
     #
     # @private
     def self.checksum(basenum)
-      result = 97 - ((basenum * 100) % 97)
+      result = 98 - ((basenum * 100) % 97)
       result.to_s.rjust(2, '0')
     end
 

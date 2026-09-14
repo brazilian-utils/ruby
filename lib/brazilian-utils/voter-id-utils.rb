@@ -13,13 +13,11 @@ module BrazilianUtils
       'AP' => '25', 'RR' => '26', 'TO' => '27', 'ZZ' => '28'
     }.freeze
 
-    module_function
-
     # Check if a Brazilian voter ID number is valid.
     #
     # @param voter_id [String] The voter ID to validate
     # @return [Boolean] true if valid, false otherwise
-    def is_valid_voter_id(voter_id)
+    def self.is_valid_voter_id(voter_id)
       # Ensure voter_id is a string with only digits and valid length
       return false unless voter_id.is_a?(String)
       return false unless voter_id.match?(/^\d+$/)
@@ -44,27 +42,37 @@ module BrazilianUtils
       true
     end
 
-    # Alias for is_valid_voter_id
-    alias valid_voter_id? is_valid_voter_id
+    class << self
+      # Alias for is_valid_voter_id
+      alias valid_voter_id? is_valid_voter_id
+    end
 
     # Format a voter ID for display with visual spaces.
     #
     # @param voter_id [String] The voter ID to format
     # @return [String, nil] Formatted voter ID or nil if invalid
-    def format_voter_id(voter_id)
+    def self.format_voter_id(voter_id)
       return nil unless is_valid_voter_id(voter_id)
 
-      "#{voter_id[0..3]} #{voter_id[4..7]} #{voter_id[8..9]} #{voter_id[10..11]}"
+      # The 13-digit SP/MG variant has an extra sequential digit; grouping it
+      # as 4+4+2+2 (like the 12-digit case) silently drops the last digit.
+      if voter_id.length == 13
+        "#{voter_id[0..3]} #{voter_id[4..7]} #{voter_id[8]} #{voter_id[9..10]} #{voter_id[11..12]}"
+      else
+        "#{voter_id[0..3]} #{voter_id[4..7]} #{voter_id[8..9]} #{voter_id[10..11]}"
+      end
     end
 
-    # Alias for format_voter_id
-    alias format format_voter_id
+    class << self
+      # Alias for format_voter_id
+      alias format format_voter_id
+    end
 
     # Generate a random valid Brazilian voter ID.
     #
     # @param federative_union [String] The UF code (e.g., "SP", "MG", "ZZ")
     # @return [String, nil] A valid voter ID or nil if UF is invalid
-    def generate(federative_union = 'ZZ')
+    def self.generate(federative_union = 'ZZ')
       federative_union = federative_union.upcase
       return nil unless UF_CODES.key?(federative_union)
 
@@ -72,7 +80,9 @@ module BrazilianUtils
       return nil unless is_federative_union_valid?(uf_number)
 
       # Generate random 8-digit sequential number
-      sequential_number = format('%08d', rand(0..99_999_999))
+      # (uses rjust, not Kernel#format, since `format` is aliased to
+      # format_voter_id on this module's singleton class below)
+      sequential_number = rand(0..99_999_999).to_s.rjust(8, '0')
 
       # Calculate verification digits
       vd1 = calculate_vd1(sequential_number, uf_number)
@@ -81,11 +91,12 @@ module BrazilianUtils
       "#{sequential_number}#{uf_number}#{vd1}#{vd2}"
     end
 
-    private
+    # PRIVATE METHODS
+    #################
 
     # Check if the length of the voter ID is valid.
     # Typically 12 digits, but can be 13 for SP and MG (edge case).
-    def is_length_valid?(voter_id)
+    def self.is_length_valid?(voter_id)
       return true if voter_id.length == 12
 
       # Edge case: SP and MG can have 13 digits
@@ -94,22 +105,22 @@ module BrazilianUtils
     end
 
     # Extract the sequential number (first 8 digits).
-    def get_sequential_number(voter_id)
+    def self.get_sequential_number(voter_id)
       voter_id[0..7]
     end
 
     # Extract the federative union (2 digits before last 2 digits).
-    def get_federative_union(voter_id)
+    def self.get_federative_union(voter_id)
       voter_id[-4..-3]
     end
 
     # Extract the verifying digits (last 2 digits).
-    def get_verifying_digits(voter_id)
+    def self.get_verifying_digits(voter_id)
       voter_id[-2..-1]
     end
 
     # Check if the federative union is valid (between '01' and '28').
-    def is_federative_union_valid?(federative_union)
+    def self.is_federative_union_valid?(federative_union)
       num = federative_union.to_i
       num >= 1 && num <= 28
     end
@@ -119,7 +130,7 @@ module BrazilianUtils
     # @param sequential_number [String] First 8 digits
     # @param federative_union [String] 2-digit UF code
     # @return [Integer] The first verification digit
-    def calculate_vd1(sequential_number, federative_union)
+    def self.calculate_vd1(sequential_number, federative_union)
       # Weights: 2, 3, 4, 5, 6, 7, 8, 9
       weights = (2..9).to_a
 
@@ -144,7 +155,7 @@ module BrazilianUtils
     # @param federative_union [String] 2-digit UF code
     # @param vd1 [Integer] First verification digit
     # @return [Integer] The second verification digit
-    def calculate_vd2(federative_union, vd1)
+    def self.calculate_vd2(federative_union, vd1)
       # Weights: 7, 8, 9
       sum = (federative_union[0].to_i * 7) +
             (federative_union[1].to_i * 8) +
@@ -161,5 +172,9 @@ module BrazilianUtils
 
       vd2
     end
+
+    private_class_method :is_length_valid?, :get_sequential_number, :get_federative_union,
+                          :get_verifying_digits, :is_federative_union_valid?, :calculate_vd1,
+                          :calculate_vd2
   end
 end

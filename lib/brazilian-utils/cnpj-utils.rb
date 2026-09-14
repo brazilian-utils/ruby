@@ -170,7 +170,7 @@ module BrazilianUtils
       (position - 8).downto(2) { |w| weights << w }
       9.downto(2) { |w| weights << w }
 
-      val = cnpj.chars.zip(weights).sum do |digit, weight|
+      val = cnpj.chars.first(position - 1).zip(weights).sum do |digit, weight|
         digit.to_i * weight
       end % 11
 

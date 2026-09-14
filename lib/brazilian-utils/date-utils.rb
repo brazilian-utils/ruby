@@ -38,6 +38,13 @@ module BrazilianUtils
       [12, 25] => 'Natal'
     }.freeze
 
+    # Lei 14.759/2023 made November 20th (Dia Nacional de Zumbi e da
+    # Consciência Negra) a national holiday starting in 2024; before that it
+    # was only a holiday in the states/cities that already had their own law
+    # for it (some of which are still listed in STATE_HOLIDAYS below).
+    NATIONAL_CONSCIENCIA_NEGRA_MONTH_DAY = [11, 20].freeze
+    NATIONAL_CONSCIENCIA_NEGRA_EFFECTIVE_YEAR = 2024
+
     # State-specific holidays (fixed dates)
     STATE_HOLIDAYS = {
       'AC' => { [1, 23] => 'Dia do Evangélico', [6, 15] => 'Aniversário do Acre', [9, 5] => 'Dia da Amazônia', [11, 17] => 'Assinatura do Tratado de Petrópolis' },
@@ -111,6 +118,10 @@ module BrazilianUtils
 
       # Check national holidays
       return true if NATIONAL_HOLIDAYS.key?(month_day)
+
+      if month_day == NATIONAL_CONSCIENCIA_NEGRA_MONTH_DAY && date.year >= NATIONAL_CONSCIENCIA_NEGRA_EFFECTIVE_YEAR
+        return true
+      end
 
       # Check state holidays if UF is provided
       if uf

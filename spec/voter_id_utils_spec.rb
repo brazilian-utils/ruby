@@ -8,8 +8,8 @@ RSpec.describe BrazilianUtils::VoterIdUtils do
       it 'validates standard 12-digit voter IDs' do
         expect(described_class.is_valid_voter_id('690847092828')).to be true
         expect(described_class.is_valid_voter_id('163204010922')).to be true
-        expect(described_class.is_valid_voter_id('000000000191')).to be true
-        expect(described_class.is_valid_voter_id('123456780140')).to be true
+        expect(described_class.is_valid_voter_id('000000000302')).to be true
+        expect(described_class.is_valid_voter_id('123456780493')).to be true
       end
 
       it 'validates voter IDs from different states' do
@@ -18,19 +18,19 @@ RSpec.describe BrazilianUtils::VoterIdUtils do
         # MG (02)
         expect(described_class.is_valid_voter_id('163204010922')).to be true
         # RJ (03)
-        expect(described_class.is_valid_voter_id('000000000191')).to be true
+        expect(described_class.is_valid_voter_id('000000000302')).to be true
         # RS (04)
-        expect(described_class.is_valid_voter_id('123456780140')).to be true
+        expect(described_class.is_valid_voter_id('123456780493')).to be true
       end
 
       it 'validates voter IDs with edge case for SP and MG (13 digits)' do
         # These are 13-digit voter IDs that are valid for SP (01) and MG (02)
         # when sequential number has 9 digits
-        expect(described_class.is_valid_voter_id('1234567890101')).to be true
+        expect(described_class.is_valid_voter_id('1234567890191')).to be true
       end
 
       it 'validates voter ID with verification digit 0 (when rest is 10)' do
-        expect(described_class.is_valid_voter_id('548044090191')).to be true
+        expect(described_class.is_valid_voter_id('000000060507')).to be true
       end
     end
 
@@ -81,12 +81,12 @@ RSpec.describe BrazilianUtils::VoterIdUtils do
       end
 
       it 'rejects numeric input' do
-        expect(described_class.is_valid_voter_id(123456780140)).to be false
+        expect(described_class.is_valid_voter_id(123456780493)).to be false
       end
 
       it 'rejects strings with only zeros except when valid' do
         expect(described_class.is_valid_voter_id('000000000000')).to be false
-        expect(described_class.is_valid_voter_id('000000000191')).to be true
+        expect(described_class.is_valid_voter_id('000000000302')).to be true
       end
     end
 
@@ -111,11 +111,13 @@ RSpec.describe BrazilianUtils::VoterIdUtils do
       it 'formats voter ID with spaces in standard pattern' do
         expect(described_class.format_voter_id('690847092828')).to eq('6908 4709 28 28')
         expect(described_class.format_voter_id('163204010922')).to eq('1632 0401 09 22')
-        expect(described_class.format_voter_id('000000000191')).to eq('0000 0000 01 91')
+        expect(described_class.format_voter_id('000000000302')).to eq('0000 0000 03 02')
       end
 
       it 'formats 13-digit voter IDs for SP and MG' do
-        expect(described_class.format_voter_id('1234567890101')).to eq('1234 5678 90 10')
+        # 4+4+1+2+2 grouping: the 9th sequential digit gets its own group
+        # instead of being silently dropped.
+        expect(described_class.format_voter_id('1234567890191')).to eq('1234 5678 9 01 91')
       end
     end
 
@@ -229,7 +231,7 @@ RSpec.describe BrazilianUtils::VoterIdUtils do
 
       it 'accepts 13-digit voter IDs only for SP and MG' do
         # Valid 13-digit for SP
-        expect(described_class.is_valid_voter_id('1234567890101')).to be true
+        expect(described_class.is_valid_voter_id('1234567890191')).to be true
       end
     end
 
@@ -248,7 +250,7 @@ RSpec.describe BrazilianUtils::VoterIdUtils do
       end
 
       it 'correctly calculates VD1 when rest is 10 (becomes 0)' do
-        expect(described_class.is_valid_voter_id('548044090191')).to be true
+        expect(described_class.is_valid_voter_id('000000060507')).to be true
       end
 
       it 'correctly calculates VD1 when rest is 0 for SP/MG (becomes 1)' do
@@ -261,7 +263,7 @@ RSpec.describe BrazilianUtils::VoterIdUtils do
       end
 
       it 'correctly calculates VD2 when rest is 10 (becomes 0)' do
-        expect(described_class.is_valid_voter_id('548044090191')).to be true
+        expect(described_class.is_valid_voter_id('000000060507')).to be true
       end
     end
 
@@ -332,9 +334,9 @@ RSpec.describe BrazilianUtils::VoterIdUtils do
       valid_ids = [
         '690847092828', # SP
         '163204010922', # MG
-        '000000000191', # RJ
-        '123456780140', # RS
-        '548044090191'  # With VD = 0
+        '000000000302', # RJ
+        '123456780493', # RS
+        '000000060507'  # With VD = 0
       ]
 
       valid_ids.each do |voter_id|
@@ -346,7 +348,7 @@ RSpec.describe BrazilianUtils::VoterIdUtils do
       examples = {
         '690847092828' => '6908 4709 28 28',
         '163204010922' => '1632 0401 09 22',
-        '000000000191' => '0000 0000 01 91'
+        '000000000302' => '0000 0000 03 02'
       }
 
       examples.each do |voter_id, expected_format|
