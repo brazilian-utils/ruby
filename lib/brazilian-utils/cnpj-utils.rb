@@ -120,33 +120,122 @@ module BrazilianUtils
     # validates the format of the string.
     #
     # @param cnpj [String] The CNPJ to be validated, a 14-digit string
+    #   (v1, numeric) or a 14-character alphanumeric string (v2, when
+    #   `version: 2` is given).
+    # @param version [Integer] `1` (default) validates the classic
+    #   all-numeric CNPJ; `2` validates the alphanumeric CNPJ introduced by
+    #   IN RFB 2.119.
     # @return [Boolean] true if the checksum digits match the base number, false otherwise.
     #
     # @example
-    #   valid?("03560714000142")   #=> true
-    #   valid?("00111222000133")   #=> false
-    def self.valid?(cnpj)
-      cnpj.is_a?(String) && validate(cnpj)
+    #   valid?("03560714000142")           #=> true
+    #   valid?("00111222000133")           #=> false
+    #   valid?("12ABC34501DE35", version: 2)
+    def self.valid?(cnpj, version: 1)
+      return false unless cnpj.is_a?(String)
+
+      version.to_i == 2 ? valid_v2?(cnpj) : validate(cnpj)
     end
 
     # Generates a random valid CNPJ digit string.
     #
-    # An optional branch number parameter can be given; it defaults to 1.
+    # An optional branch number parameter can be given; it defaults to 1
+    # (v1) or a random branch 1-9999 (v2, when not given).
     #
-    # @param branch [Integer] An optional branch number to be included in the CNPJ.
+    # @param branch [Integer, nil] An optional branch number to be included
+    #   in the CNPJ.
+    # @param version [Integer] `1` (default) generates the classic
+    #   all-numeric CNPJ; `2` generates the alphanumeric CNPJ.
     # @return [String] A randomly generated valid CNPJ string.
     #
     # @example
-    #   generate()        #=> "30180536000105"
-    #   generate(1234)    #=> "01745284123455"
-    def self.generate(branch: 1)
-      branch = branch % 10_000
-      branch = 1 if branch.zero?
-      branch_str = branch.to_s.rjust(4, '0')
+    #   generate()               #=> "30180536000105"
+    #   generate(branch: 1234)   #=> "01745284123455"
+    #   generate(version: 2)     #=> "12ABC34501DE35"
+    def self.generate(branch: nil, version: 1)
+      return generate_v2(branch) if version.to_i == 2
+
+      branch_num = branch.nil? ? 1 : branch % 10_000
+      branch_num = 1 if branch_num.zero?
+      branch_str = branch_num.to_s.rjust(4, '0')
       base = format('%08d', rand(100_000_000)) + branch_str
 
       base + checksum(base)
     end
+
+    # V2 (ALPHANUMERIC, IN RFB 2.119)
+    #################################
+
+    # Characters usable in the alphanumeric CNPJ's base (positions 0-11).
+    V2_CHARSET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'.freeze
+
+    V2_WEIGHTS_DV1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2].freeze
+    V2_WEIGHTS_DV2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2].freeze
+
+    # Maps a base-36 character (`0`-`9`, `A`-`Z`) to its numeric value for
+    # the v2 checksum: `'0'`..`'9'` -> 0..9, `'A'`..`'Z'` -> 17..42 (its
+    # ASCII code minus 48).
+    #
+    # @private
+    def self.v2_char_value(char)
+      char.ord - 48
+    end
+
+    private_class_method :v2_char_value
+
+    # Computes a single modulus-11 check digit over `chars` (a String of
+    # `0`-`9`/`A`-`Z` characters) using the given per-position weights.
+    #
+    # @private
+    def self.v2_hashdigit(chars, weights)
+      sum = chars.chars.each_with_index.sum { |c, i| v2_char_value(c) * weights[i] }
+      mod = sum % 11
+      mod < 2 ? 0 : 11 - mod
+    end
+
+    private_class_method :v2_hashdigit
+
+    # Validates a 14-character alphanumeric CNPJ (case-insensitive).
+    #
+    # @param cnpj [String]
+    # @return [Boolean]
+    #
+    # @private
+    def self.valid_v2?(cnpj)
+      upper = cnpj.to_s.upcase
+      return false unless upper.match?(/\A[0-9A-Z]{14}\z/)
+
+      dv1 = v2_hashdigit(upper[0, 12], V2_WEIGHTS_DV1)
+      return false unless dv1 == v2_char_value(upper[12])
+
+      dv2 = v2_hashdigit(upper[0, 13], V2_WEIGHTS_DV2)
+      dv2 == v2_char_value(upper[13])
+    end
+
+    private_class_method :valid_v2?
+
+    # Generates a random valid alphanumeric (v2) CNPJ.
+    #
+    # @param branch [Integer, nil] An optional branch number (1-9999); a
+    #   random one is used when not given.
+    # @return [String]
+    #
+    # @private
+    def self.generate_v2(branch = nil)
+      branch_num = branch.nil? ? rand(1..9999) : branch % 10_000
+      branch_num = 1 if branch_num.zero?
+      branch_str = branch_num.to_s.rjust(4, '0')
+
+      base8 = Array.new(8) { V2_CHARSET[rand(V2_CHARSET.length)] }.join
+      base12 = base8 + branch_str
+
+      dv1 = v2_hashdigit(base12, V2_WEIGHTS_DV1)
+      dv2 = v2_hashdigit(base12 + dv1.to_s, V2_WEIGHTS_DV2)
+
+      "#{base12}#{dv1}#{dv2}"
+    end
+
+    private_class_method :generate_v2
 
     # PRIVATE METHODS
     #################
@@ -198,5 +287,29 @@ module BrazilianUtils
     end
 
     private_class_method :hashdigit, :checksum
+
+    # Removes CNPJ formatting and returns the normalized value, capped to 14
+    # characters.
+    #
+    # @param value [String, Integer] A CNPJ, with or without formatting.
+    # @param options [Hash] `:version` `1` (default) keeps digits only; `2`
+    #   keeps letters and digits, upper-cased (the alphanumeric CNPJ format).
+    # @return [String] The parsed value.
+    #
+    # @example
+    #   parse("46.843.485/0001-86")  #=> "46843485000186"
+    def self.parse(value, options = {})
+      return '' unless value.is_a?(String) || value.is_a?(Integer)
+
+      version = (options[:version] || options['version'] || 1).to_i
+
+      cleaned = if version == 2
+                  value.to_s.gsub(/[^a-zA-Z0-9]/, '').upcase
+                else
+                  value.to_s.gsub(/\D/, '')
+                end
+
+      cleaned[0, 14]
+    end
   end
 end

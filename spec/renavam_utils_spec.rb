@@ -385,4 +385,14 @@ RSpec.describe BrazilianUtils::RENAVAMUtils do
       expect(described_class.is_valid_renavam(renavam)).to be true
     end
   end
+
+  describe '.generate' do
+    it 'generates a value that passes .is_valid_renavam' do
+      10.times do
+        renavam = described_class.generate
+        expect(described_class.is_valid_renavam(renavam)).to be true
+        expect(renavam.length).to eq(11)
+      end
+    end
+  end
 end

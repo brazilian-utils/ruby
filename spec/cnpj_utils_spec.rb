@@ -181,6 +181,28 @@ describe BrazilianUtils::CNPJUtils do
     end
   end
 
+  describe '.parse' do
+    it 'removes formatting' do
+      expect(BrazilianUtils::CNPJUtils.parse('46.843.485/0001-86')).to eq('46843485000186')
+    end
+
+    it 'strips non-digit characters' do
+      expect(BrazilianUtils::CNPJUtils.parse('46.?ABC843.485/0001-86abc')).to eq('46843485000186')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(BrazilianUtils::CNPJUtils.parse('')).to eq('')
+    end
+
+    it 'caps the result to 14 characters' do
+      expect(BrazilianUtils::CNPJUtils.parse('46843485000186123')).to eq('46843485000186')
+    end
+
+    it 'keeps letters upper-cased with version: 2' do
+      expect(BrazilianUtils::CNPJUtils.parse('12.ABC.345/01DE-35', version: 2)).to eq('12ABC34501DE35')
+    end
+  end
+
   describe 'integration tests' do
     it 'can format a generated CNPJ' do
       cnpj = BrazilianUtils::CNPJUtils.generate
@@ -230,6 +252,62 @@ describe BrazilianUtils::CNPJUtils do
 
     it 'does not expose checksum' do
       expect(BrazilianUtils::CNPJUtils).not_to respond_to(:checksum)
+    end
+
+    it 'does not expose the v2 helpers' do
+      expect(BrazilianUtils::CNPJUtils).not_to respond_to(:v2_hashdigit)
+      expect(BrazilianUtils::CNPJUtils).not_to respond_to(:v2_char_value)
+      expect(BrazilianUtils::CNPJUtils).not_to respond_to(:valid_v2?)
+      expect(BrazilianUtils::CNPJUtils).not_to respond_to(:generate_v2)
+    end
+  end
+
+  describe 'v2 (alphanumeric, IN RFB 2.119)' do
+    describe '.valid? with version: 2' do
+      it 'accepts a check-digit-correct alphanumeric CNPJ' do
+        expect(BrazilianUtils::CNPJUtils.valid?('12ABC345000188', version: 2)).to be true
+      end
+
+      it 'is case-insensitive' do
+        expect(BrazilianUtils::CNPJUtils.valid?('12abc345000188', version: 2)).to be true
+      end
+
+      it 'rejects wrong check digits' do
+        expect(BrazilianUtils::CNPJUtils.valid?('12ABC345000199', version: 2)).to be false
+      end
+
+      it 'rejects a character outside 0-9A-Z' do
+        expect(BrazilianUtils::CNPJUtils.valid?('12AB#345000188', version: 2)).to be false
+      end
+
+      it 'rejects the wrong length' do
+        expect(BrazilianUtils::CNPJUtils.valid?('12ABC34500018', version: 2)).to be false
+      end
+    end
+
+    describe '.valid? default/v1 behavior is unaffected' do
+      it 'still rejects an alphanumeric CNPJ under the default (v1) check' do
+        expect(BrazilianUtils::CNPJUtils.valid?('12ABC345000188')).to be false
+      end
+    end
+
+    describe '.generate with version: 2' do
+      it 'round-trips through .valid? with version: 2' do
+        cnpj = BrazilianUtils::CNPJUtils.generate(version: 2)
+        expect(cnpj).to match(/\A[0-9A-Z]{14}\z/)
+        expect(BrazilianUtils::CNPJUtils.valid?(cnpj, version: 2)).to be true
+      end
+
+      it 'uses the given branch' do
+        cnpj = BrazilianUtils::CNPJUtils.generate(branch: 42, version: 2)
+        expect(cnpj[8, 4]).to eq('0042')
+        expect(BrazilianUtils::CNPJUtils.valid?(cnpj, version: 2)).to be true
+      end
+
+      it 'generates different CNPJs on multiple calls' do
+        cnpjs = 10.times.map { BrazilianUtils::CNPJUtils.generate(version: 2) }
+        expect(cnpjs.uniq.length).to be > 1
+      end
     end
   end
 end

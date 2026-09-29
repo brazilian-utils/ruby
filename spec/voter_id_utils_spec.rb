@@ -356,4 +356,32 @@ RSpec.describe BrazilianUtils::VoterIdUtils do
       end
     end
   end
+
+  describe '.remove_symbols' do
+    it 'removes spaces' do
+      expect(described_class.remove_symbols('1234 5678 01 24')).to eq('123456780124')
+    end
+
+    it 'returns an empty string for non-string input' do
+      expect(described_class.remove_symbols(nil)).to eq('')
+    end
+  end
+
+  describe '.parse' do
+    it 'removes spacing from a 12-digit voter ID' do
+      expect(described_class.parse('1234 5678 01 24')).to eq('123456780124')
+    end
+
+    it 'keeps an already-clean 12-digit value unchanged' do
+      expect(described_class.parse('123456780124')).to eq('123456780124')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(described_class.parse('')).to eq('')
+    end
+
+    it 'keeps a 13th digit for the SP/MG form' do
+      expect(described_class.parse('1234 5678 8 01 91')).to eq('1234567880191')
+    end
+  end
 end

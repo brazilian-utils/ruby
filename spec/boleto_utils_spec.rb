@@ -114,4 +114,69 @@ RSpec.describe BrazilianUtils::BoletoUtils do
       expect(described_class.valid?(valid_line)).to eq(described_class.is_valid(valid_line))
     end
   end
+
+  describe '.format' do
+    it 'masks a 47-digit cobrança bancária linha digitável' do
+      expect(described_class.format('10491443385511900000200000000141325230000093423'))
+        .to eq('10491.44338 55119.000002 00000.000141 3 25230000093423')
+    end
+
+    it 'masks a partial value as far as it goes' do
+      expect(described_class.format('104914')).to eq('10491.4')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(described_class.format('')).to eq('')
+    end
+  end
+
+  describe '.parse' do
+    it 'removes the cobrança bancária mask' do
+      expect(described_class.parse('10491.44338 55119.000002 00000.000141 3 25230000093423'))
+        .to eq('10491443385511900000200000000141325230000093423')
+    end
+
+    it 'removes the arrecadação mask (48 digits, leading 8)' do
+      expect(described_class.parse('84610000000-5 24610029110-2 00546033900-4 69589506108-0'))
+        .to eq('846100000005246100291102005460339004695895061080')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(described_class.parse('')).to eq('')
+    end
+  end
+
+  describe '.generate' do
+    it 'generates a 47-digit value that passes .is_valid' do
+      10.times do
+        line = described_class.generate
+        expect(line.length).to eq(47)
+        expect(described_class.is_valid(line)).to be true
+      end
+    end
+
+    it 'returns nil for type: "arrecadacao" (not implemented)' do
+      expect(described_class.generate(type: 'arrecadacao')).to be_nil
+    end
+  end
+
+  describe '.get_info' do
+    # NOTE: no acceptance cases were available in the contract for this
+    # function; the due-date (fator de vencimento) resolution in
+    # particular is unverified against a reference implementation.
+
+    it 'extracts the bank code and amount from a valid boleto' do
+      info = described_class.get_info('60757135008571297205909229083648919190488862573')
+      expect(info[:bankCode]).to eq('607')
+      expect(info[:amount]).to eq(488_862_573)
+    end
+
+    it 'returns nil for an invalid boleto' do
+      expect(described_class.get_info('00000000000000000000000000000000000000000000000')).to be_nil
+    end
+
+    it 'returns nil for an empty string' do
+      expect(described_class.get_info('')).to be_nil
+    end
+  end
 end

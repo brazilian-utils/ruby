@@ -25,6 +25,10 @@ module BrazilianUtils
 
   module DateUtils
     DATE_REGEX = /^\d{2}\/\d{2}\/\d{4}$/.freeze
+    ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/.freeze
+
+    MIN_YEAR = 1900
+    MAX_YEAR = 2099
 
     # Brazilian national holidays (fixed dates)
     NATIONAL_HOLIDAYS = {
@@ -44,6 +48,7 @@ module BrazilianUtils
     # for it (some of which are still listed in STATE_HOLIDAYS below).
     NATIONAL_CONSCIENCIA_NEGRA_MONTH_DAY = [11, 20].freeze
     NATIONAL_CONSCIENCIA_NEGRA_EFFECTIVE_YEAR = 2024
+    NATIONAL_CONSCIENCIA_NEGRA_NAME = 'Dia Nacional de Zumbi e da Consciência Negra'
 
     # State-specific holidays (fixed dates)
     STATE_HOLIDAYS = {
@@ -82,48 +87,49 @@ module BrazilianUtils
 
     # Checks if the given date is a national or state holiday in Brazil.
     #
-    # This function takes a date as a Date or DateTime object and an optional UF (Unidade Federativa),
-    # returning a boolean value indicating whether the date is a holiday or nil if the date or
-    # UF are invalid.
+    # Accepts either the legacy positional form `is_holiday(date, uf)` or a
+    # single options Hash (as the contract's `IsHolidayParams`), e.g.
+    # `is_holiday(date: Date.new(2024, 7, 9), state: 'SP')`.
     #
-    # The method does not handle municipal holidays.
+    # @param target_date [Date, DateTime, Time, Hash] The date to check, or
+    #   an options Hash with `:date` and an optional `:state`/`:uf`.
+    # @param uf [String, nil] The state abbreviation (UF) to check for state
+    #   holidays, when `target_date` is not itself a Hash. An unknown UF is
+    #   simply ignored (national holidays are still checked).
     #
-    # @param target_date [Date, DateTime, Time] The date to be checked.
-    # @param uf [String, nil] The state abbreviation (UF) to check for state holidays.
-    #   If not provided, only national holidays will be considered.
+    # @return [Boolean] true if the date is a holiday, false otherwise
+    #   (including when the date is missing or invalid).
     #
-    # @return [Boolean, nil] Returns true if the date is a holiday, false if it is not,
-    #   or nil if the date or UF are invalid.
-    #
-    # @note This implementation includes fixed national and state holidays.
-    #   Movable holidays (like Carnival, Easter) are not included in this basic implementation.
+    # @note This implementation includes fixed national and state holidays,
+    #   plus the moveable Sexta-feira Santa (Good Friday).
     #
     # @example
     #   is_holiday(Date.new(2024, 1, 1))          #=> true (New Year)
     #   is_holiday(Date.new(2024, 1, 2))          #=> false
     #   is_holiday(Date.new(2024, 7, 9), 'SP')    #=> true (SP state holiday)
-    #   is_holiday(Date.new(2024, 12, 25), 'RJ')  #=> true (Christmas)
-    def self.is_holiday(target_date, uf = nil)
-      return nil unless target_date.is_a?(Date) || target_date.is_a?(DateTime) || target_date.is_a?(Time)
-
-      # Convert to Date if needed
-      date = target_date.is_a?(Date) ? target_date : target_date.to_date
-
-      # Validate UF if provided
-      if uf && !VALID_UFS.include?(uf.to_s.upcase)
-        return nil
+    #   is_holiday(date: Date.new(2024, 12, 25))  #=> true (Christmas)
+    def self.is_holiday(target_date = nil, uf = nil)
+      if target_date.is_a?(Hash)
+        opts = target_date
+        target_date = opts[:date] || opts['date']
+        uf = opts[:state] || opts[:uf] || opts['state'] || opts['uf']
       end
+
+      return false unless target_date.is_a?(Date) || target_date.is_a?(DateTime) || target_date.is_a?(Time)
+
+      date = target_date.is_a?(Date) ? target_date : target_date.to_date
+      return false unless date.year.between?(MIN_YEAR, MAX_YEAR)
 
       month_day = [date.month, date.day]
 
-      # Check national holidays
       return true if NATIONAL_HOLIDAYS.key?(month_day)
 
       if month_day == NATIONAL_CONSCIENCIA_NEGRA_MONTH_DAY && date.year >= NATIONAL_CONSCIENCIA_NEGRA_EFFECTIVE_YEAR
         return true
       end
 
-      # Check state holidays if UF is provided
+      return true if date == good_friday(date.year)
+
       if uf
         state_uf = uf.to_s.upcase
         state_holidays = STATE_HOLIDAYS[state_uf]
@@ -133,48 +139,290 @@ module BrazilianUtils
       false
     end
 
-    # Converts a given date in Brazilian format (dd/mm/yyyy) to its textual representation.
+    # Returns the date of Easter Sunday (Domingo de Páscoa) for a given
+    # Gregorian year, via the anonymous Gregorian computus algorithm
+    # (Meeus/Jones/Butcher).
     #
-    # This function takes a date as a string in the format dd/mm/yyyy and converts it
-    # to a string with the date written out in Brazilian Portuguese, including the full
-    # month name and the year.
+    # @param year [Integer]
+    # @return [Date]
     #
-    # @param date [String] The date to be converted into text. Expected format: dd/mm/yyyy.
+    # @private
+    def self.easter_sunday(year)
+      a = year % 19
+      b = year / 100
+      c = year % 100
+      d = b / 4
+      e = b % 4
+      f = (b + 8) / 25
+      g = (b - f + 1) / 3
+      h = (19 * a + b - d - g + 15) % 30
+      i = c / 4
+      k = c % 4
+      l = (32 + 2 * e + 2 * i - h - k) % 7
+      m = (a + 11 * h + 22 * l) / 451
+      month = (h + l - 7 * m + 114) / 31
+      day = ((h + l - 7 * m + 114) % 31) + 1
+      Date.new(year, month, day)
+    end
+
+    private_class_method :easter_sunday
+
+    # @private
+    def self.good_friday(year)
+      easter_sunday(year) - 2
+    end
+
+    private_class_method :good_friday
+
+    # @private
+    def self.carnaval_monday(year)
+      easter_sunday(year) - 48
+    end
+
+    private_class_method :carnaval_monday
+
+    # @private
+    def self.carnaval_tuesday(year)
+      easter_sunday(year) - 47
+    end
+
+    private_class_method :carnaval_tuesday
+
+    # @private
+    def self.corpus_christi(year)
+      easter_sunday(year) + 60
+    end
+
+    private_class_method :corpus_christi
+
+    # Returns the Brazilian holidays of a given year, sorted by date.
     #
-    # @return [String, nil] A string with the date written out in Brazilian Portuguese,
-    #   or nil if the date is invalid.
+    # Each holiday is a Hash with `:name`, `:date` (a `Date`) and `:type`
+    # (`:national`, `:state`, `:optional` or `:religious`).
+    #
+    # @param year [Integer] A year between 1900 and 2099.
+    # @return [Array<Hash>] The holidays, sorted by date; an empty array when
+    #   `year` is out of range.
     #
     # @example
-    #   convert_date_to_text("01/01/2024")  #=> "Primeiro de janeiro de dois mil e vinte e quatro"
-    #   convert_date_to_text("15/03/2024")  #=> "Quinze de março de dois mil e vinte e quatro"
-    #   convert_date_to_text("invalid")     #=> nil
-    def self.convert_date_to_text(date)
-      return nil unless date.is_a?(String)
-      return nil unless DATE_REGEX.match?(date)
+    #   get_holidays(2024).first
+    #   #=> { name: "Ano Novo", date: #<Date: 2024-01-01>, type: :national }
+    def self.get_holidays(year)
+      return [] unless year.is_a?(Integer) && year.between?(MIN_YEAR, MAX_YEAR)
 
-      begin
-        dt = Date.strptime(date, '%d/%m/%Y')
-      rescue ArgumentError
-        return nil
+      holidays = []
+
+      NATIONAL_HOLIDAYS.each do |(month, day), name|
+        holidays << { name: name, date: Date.new(year, month, day), type: :national }
       end
+
+      if year >= NATIONAL_CONSCIENCIA_NEGRA_EFFECTIVE_YEAR
+        holidays << {
+          name: NATIONAL_CONSCIENCIA_NEGRA_NAME,
+          date: Date.new(year, *NATIONAL_CONSCIENCIA_NEGRA_MONTH_DAY),
+          type: :national
+        }
+      end
+
+      holidays << { name: 'Sexta-feira Santa', date: good_friday(year), type: :religious }
+      holidays << { name: 'Carnaval', date: carnaval_monday(year), type: :optional }
+      holidays << { name: 'Carnaval', date: carnaval_tuesday(year), type: :optional }
+      holidays << { name: 'Corpus Christi', date: corpus_christi(year), type: :optional }
+
+      holidays.sort_by { |h| h[:date] }
+    end
+
+    # @private
+    def self.coerce_date(value)
+      case value
+      when Date, DateTime, Time
+        value.is_a?(Date) ? value : value.to_date
+      else
+        nil
+      end
+    end
+
+    private_class_method :coerce_date
+
+    # Checks whether a date is a Brazilian business day (dia útil): not a
+    # Saturday, a Sunday, nor a holiday from {get_holidays}.
+    #
+    # @param value [Date, DateTime, Time] The date to check.
+    # @param options [Hash] `:optional` (default true) also counts Carnaval
+    #   and Corpus Christi; `:state`/`:uf` also counts that state's holidays.
+    # @return [Boolean] false for an invalid date or one outside 1900..2099.
+    def self.is_business_day(value, options = {})
+      date = coerce_date(value)
+      return false unless date
+      return false unless date.year.between?(MIN_YEAR, MAX_YEAR)
+      return false if [0, 6].include?(date.wday) # Sunday = 0, Saturday = 6
+
+      count_optional = options[:optional].nil? && options['optional'].nil? ? true : (options[:optional] || options['optional'])
+      state = options[:state] || options[:uf] || options['state'] || options['uf']
+
+      holidays = get_holidays(date.year)
+      holidays.concat(get_holidays(date.year - 1), get_holidays(date.year + 1)) if date.month == 1 || date.month == 12
+
+      holidays.each do |holiday|
+        next if holiday[:date] != date
+        next if holiday[:type] == :optional && !count_optional
+
+        return false
+      end
+
+      if state
+        state_uf = state.to_s.upcase
+        state_holidays = STATE_HOLIDAYS[state_uf]
+        return false if state_holidays && state_holidays.key?([date.month, date.day])
+      end
+
+      true
+    end
+
+    class << self
+      alias business_day? is_business_day
+    end
+
+    # Adds (or, with a negative amount, subtracts) a number of Brazilian
+    # business days to a date, skipping weekends and holidays.
+    #
+    # @param date [Date, DateTime, Time] The starting date.
+    # @param amount [Integer] The number of business days to add.
+    # @param options [Hash] Same as {is_business_day}.
+    # @return [Date, DateTime, Time, nil] A new date/time of the same class
+    #   as the input (time of day preserved), or nil for an invalid date, a
+    #   non-integer amount, or a result outside 1900..2099.
+    def self.add_business_days(date, amount, options = {})
+      return nil unless date.is_a?(Date) || date.is_a?(DateTime) || date.is_a?(Time)
+      return nil unless amount.is_a?(Integer)
+
+      base_date = coerce_date(date)
+      return nil unless base_date
+
+      remaining = amount.abs
+      step = amount.negative? ? -1 : 1
+      current = base_date
+
+      while remaining.positive?
+        current += step
+        remaining -= 1 if is_business_day(current, options)
+      end
+
+      return nil unless current.year.between?(MIN_YEAR, MAX_YEAR)
+
+      diff_days = (current - base_date).to_i
+      date + diff_days
+    end
+
+    # Subtracts a number of Brazilian business days from a date.
+    #
+    # @param date [Date, DateTime, Time] The starting date.
+    # @param amount [Integer] The number of business days to subtract.
+    # @param options [Hash] Same as {is_business_day}.
+    # @return [Date, DateTime, Time, nil] See {add_business_days}.
+    def self.sub_business_days(date, amount, options = {})
+      return nil unless amount.is_a?(Integer)
+
+      add_business_days(date, -amount, options)
+    end
+
+    # Counts the Brazilian business days between two dates: `earlier_date`
+    # (when it is itself a business day) and every business day strictly
+    # between the two; `later_date` is never counted.
+    #
+    # @param later_date [Date, DateTime, Time]
+    # @param earlier_date [Date, DateTime, Time]
+    # @param options [Hash] Same as {is_business_day}.
+    # @return [Integer, nil] Negative when `later_date` precedes
+    #   `earlier_date`; 0 on the same calendar day; nil when either date is
+    #   invalid or outside 1900..2099.
+    def self.difference_in_business_days(later_date, earlier_date, options = {})
+      later = coerce_date(later_date)
+      earlier = coerce_date(earlier_date)
+      return nil unless later && earlier
+      return nil unless later.year.between?(MIN_YEAR, MAX_YEAR) && earlier.year.between?(MIN_YEAR, MAX_YEAR)
+
+      return 0 if later == earlier
+
+      if later > earlier
+        count = 0
+        d = earlier
+        while d < later
+          count += 1 if is_business_day(d, options)
+          d += 1
+        end
+        count
+      else
+        -difference_in_business_days(earlier, later, options)
+      end
+    end
+
+    # Converts a given date to its textual representation in Brazilian
+    # Portuguese ("por extenso"), e.g. `"primeiro de janeiro de dois mil e
+    # vinte e quatro"`.
+    #
+    # @param date [String, Date, DateTime, Time] The date to convert. A
+    #   string may be `dd/mm/yyyy` or ISO `yyyy-mm-dd`.
+    #
+    # @return [String] The date written out in Brazilian Portuguese (all
+    #   lower case), or an empty string when the date is invalid.
+    #
+    # @example
+    #   convert_date_to_text("01/01/2024")  #=> "primeiro de janeiro de dois mil e vinte e quatro"
+    #   convert_date_to_text("15/03/2024")  #=> "quinze de março de dois mil e vinte e quatro"
+    #   convert_date_to_text("invalid")     #=> ""
+    def self.convert_date_to_text(date)
+      dt =
+        case date
+        when Date, DateTime, Time
+          date.is_a?(Date) ? date : date.to_date
+        when String
+          parse_text_date(date)
+        end
+
+      return '' unless dt
 
       day = dt.day
       month = dt.month
       year = dt.year
 
       # Convert day to text (special case for 1st)
-      day_str = if day == 1
-                  'Primeiro'
-                else
-                  # Reuse number_to_words from CurrencyUtils or implement inline
-                  number_to_words(day).capitalize
-                end
+      day_str = day == 1 ? 'primeiro' : number_to_words(day)
 
       month_name = Months.name(month)
       year_str = number_to_words(year)
 
       "#{day_str} de #{month_name} de #{year_str}"
     end
+
+    # Parses a `dd/mm/yyyy` or ISO `yyyy-mm-dd` date string.
+    #
+    # @return [Date, nil]
+    #
+    # @private
+    def self.parse_text_date(date)
+      return nil unless date.is_a?(String)
+
+      if DATE_REGEX.match?(date)
+        begin
+          return Date.strptime(date, '%d/%m/%Y')
+        rescue ArgumentError
+          return nil
+        end
+      end
+
+      if ISO_DATE_REGEX.match?(date)
+        begin
+          return Date.strptime(date, '%Y-%m-%d')
+        rescue ArgumentError
+          return nil
+        end
+      end
+
+      nil
+    end
+
+    private_class_method :parse_text_date
 
     # Converts a number to its textual representation in Brazilian Portuguese.
     # This is a simplified version focused on dates (days 1-31, years).
@@ -230,7 +478,7 @@ module BrazilianUtils
         remainder = number % 1000
 
         result = []
-        
+
         if thousands == 1
           result << 'mil'
         else

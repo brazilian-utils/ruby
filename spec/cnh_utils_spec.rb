@@ -138,4 +138,50 @@ describe BrazilianUtils::CNHUtils do
       expect(BrazilianUtils::CNHUtils).not_to respond_to(:check_second_verificator)
     end
   end
+
+  describe '.format' do
+    it 'masks an 11-digit value' do
+      expect(described_class.format('00000000119')).to eq('000000001-19')
+    end
+
+    it 'is idempotent (re-masks an already-masked value)' do
+      expect(described_class.format('000.000.001-19')).to eq('000000001-19')
+    end
+
+    it 'masks a partial (10-digit) value as far as it goes' do
+      expect(described_class.format('0000000011')).to eq('000000001-1')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(described_class.format('')).to eq('')
+    end
+  end
+
+  describe '.parse' do
+    it 'removes the mask' do
+      expect(described_class.parse('000000001-19')).to eq('00000000119')
+    end
+
+    it 'strips non-digit characters' do
+      expect(described_class.parse('000.abc000001-19')).to eq('00000000119')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(described_class.parse('')).to eq('')
+    end
+
+    it 'caps the result to 11 characters' do
+      expect(described_class.parse('00000000119123')).to eq('00000000119')
+    end
+  end
+
+  describe '.generate' do
+    it 'generates a value that passes .valid?' do
+      10.times do
+        cnh = described_class.generate
+        expect(described_class.valid?(cnh)).to be true
+        expect(cnh.length).to eq(11)
+      end
+    end
+  end
 end

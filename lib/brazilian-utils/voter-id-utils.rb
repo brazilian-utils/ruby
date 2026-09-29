@@ -176,5 +176,41 @@ module BrazilianUtils
     private_class_method :is_length_valid?, :get_sequential_number, :get_federative_union,
                           :get_verifying_digits, :is_federative_union_valid?, :calculate_vd1,
                           :calculate_vd2
+
+    # Removes the voter ID formatting symbols (spaces), keeping everything else.
+    #
+    # @param value [String] A voter ID, with or without spacing.
+    # @return [String] The value with spaces removed.
+    #
+    # @example
+    #   remove_symbols("1234 5678 01 24")  #=> "123456780124"
+    def self.remove_symbols(value)
+      return '' unless value.is_a?(String)
+
+      value.gsub(/\s/, '')
+    end
+
+    # Removes voter ID formatting and keeps only digits, capped to 12 digits
+    # (13 when the UF portion is SP or MG).
+    #
+    # @param value [String, Integer] A voter ID, with or without formatting.
+    # @return [String] The parsed digits.
+    #
+    # @example
+    #   parse("1234 5678 01 24")     #=> "123456780124"
+    #   parse("1234 5678 8 01 91")   #=> "1234567880191" (13-digit SP/MG form)
+    def self.parse(value)
+      return '' unless value.is_a?(String) || value.is_a?(Integer)
+
+      digits = value.to_s.gsub(/\D/, '')
+      return '' if digits.empty?
+
+      if digits.length > 12
+        candidate = digits[0, 13]
+        return candidate if candidate.length == 13 && %w[01 02].include?(candidate[-4..-3])
+      end
+
+      digits[0, 12]
+    end
   end
 end

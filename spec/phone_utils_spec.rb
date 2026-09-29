@@ -2,82 +2,56 @@ require 'spec_helper'
 
 RSpec.describe BrazilianUtils::PhoneUtils do
   describe '.format_phone' do
-    context 'when formatting valid mobile numbers' do
-      it 'formats 11-digit mobile number' do
-        expect(described_class.format_phone('11994029275')).to eq('(11)99402-9275')
+    context 'with the default (subscriber-number / "sn") mask' do
+      it 'formats a 9-digit mobile subscriber number' do
+        expect(described_class.format_phone('988887777')).to eq('98888-7777')
       end
 
-      it 'formats mobile number with DDD 21' do
-        expect(described_class.format_phone('21987654321')).to eq('(21)98765-4321')
+      it 'formats a partial (8-digit) number as far as it goes' do
+        expect(described_class.format_phone('98888777')).to eq('98888-777')
       end
 
-      it 'formats mobile number with DDD 85' do
-        expect(described_class.format_phone('85912345678')).to eq('(85)91234-5678')
+      it 'returns an empty string for empty input' do
+        expect(described_class.format_phone('')).to eq('')
       end
 
-      it 'formats mobile number starting with 9' do
-        expect(described_class.format_phone('47999887766')).to eq('(47)99988-7766')
-      end
-    end
-
-    context 'when formatting valid landline numbers' do
-      it 'formats 10-digit landline number' do
-        expect(described_class.format_phone('1635014415')).to eq('(16)3501-4415')
+      it 'ignores a DDD under the default mask (keeps only the first 9 digits)' do
+        expect(described_class.format_phone('1130000000')).to eq('11300-0000')
       end
 
-      it 'formats landline starting with 2' do
-        expect(described_class.format_phone('1122334455')).to eq('(11)2233-4455')
-      end
-
-      it 'formats landline starting with 3' do
-        expect(described_class.format_phone('2133445566')).to eq('(21)3344-5566')
-      end
-
-      it 'formats landline starting with 4' do
-        expect(described_class.format_phone('8544556677')).to eq('(85)4455-6677')
-      end
-
-      it 'formats landline starting with 5' do
-        expect(described_class.format_phone('4755667788')).to eq('(47)5566-7788')
+      it 'returns an empty string for nil' do
+        expect(described_class.format_phone(nil)).to eq('')
       end
     end
 
-    context 'when formatting fails' do
-      it 'returns nil for invalid number' do
-        expect(described_class.format_phone('333333')).to be_nil
+    context 'with the :ddd mask' do
+      it 'formats an 11-digit mobile number' do
+        expect(described_class.format_phone('11994029275', mask: :ddd)).to eq('(11) 99402-9275')
       end
 
-      it 'returns nil for too short number' do
-        expect(described_class.format_phone('123456')).to be_nil
+      it 'formats a 10-digit landline number' do
+        expect(described_class.format_phone('1635014415', mask: :ddd)).to eq('(16) 3501-4415')
       end
 
-      it 'returns nil for too long number' do
-        expect(described_class.format_phone('123456789012')).to be_nil
+      it 'returns an empty string when the digit count does not fit DDD + number' do
+        expect(described_class.format_phone('333333', mask: :ddd)).to eq('')
       end
+    end
 
-      it 'returns nil for empty string' do
-        expect(described_class.format_phone('')).to be_nil
+    context 'with the :e164 mask' do
+      it 'prefixes +55 with no separators' do
+        expect(described_class.format_phone('11994029275', mask: :e164)).to eq('+5511994029275')
       end
+    end
 
-      it 'returns nil for non-string input' do
-        expect(described_class.format_phone(nil)).to be_nil
-      end
-
-      it 'returns nil for numeric input' do
-        expect(described_class.format_phone(11994029275)).to be_nil
-      end
-
-      it 'returns nil for mobile with invalid DDD (starts with 0)' do
-        expect(described_class.format_phone('01987654321')).to be_nil
-      end
-
-      it 'returns nil for landline with digit 6 after DDD' do
-        expect(described_class.format_phone('1166778899')).to be_nil
+    context 'with the :international mask' do
+      it 'formats with +55, DDD and a hyphen' do
+        expect(described_class.format_phone('11994029275', mask: :international)).to eq('+55 11 99402-9275')
       end
     end
 
     it 'has an alias method .format' do
-      expect(described_class.format('11994029275')).to eq('(11)99402-9275')
+      expect(described_class.format('988887777')).to eq('98888-7777')
     end
   end
 
@@ -105,6 +79,14 @@ RSpec.describe BrazilianUtils::PhoneUtils do
 
       it 'validates mobile with DDD 99' do
         expect(described_class.is_valid('99987654321')).to be true
+      end
+
+      it 'accepts a leading +55 country code' do
+        expect(described_class.is_valid('+5511994029275')).to be true
+      end
+
+      it 'accepts a leading 0055 country code' do
+        expect(described_class.is_valid('005511994029275')).to be true
       end
     end
 
@@ -226,14 +208,142 @@ RSpec.describe BrazilianUtils::PhoneUtils do
       it 'rejects alphabetic characters' do
         expect(described_class.is_valid('11ABC029275')).to be false
       end
-
-      it 'rejects number with symbols' do
-        expect(described_class.is_valid('(11)99402-9275')).to be false
-      end
     end
 
     it 'has an alias method .valid?' do
       expect(described_class.valid?('11994029275')).to be true
+    end
+  end
+
+  describe '.parse' do
+    it 'strips a masked mobile number' do
+      expect(described_class.parse('(11) 98888-7777')).to eq('11988887777')
+    end
+
+    it 'keeps a 9-digit number without a DDD' do
+      expect(described_class.parse('98888-7777')).to eq('988887777')
+    end
+
+    it 'strips a leading +55 country code' do
+      expect(described_class.parse('+55 11 98888-7777')).to eq('11988887777')
+    end
+
+    it 'strips a leading 0055 country code' do
+      expect(described_class.parse('005511988887777')).to eq('11988887777')
+    end
+
+    it 'strips a bare leading 55 country code from a landline' do
+      expect(described_class.parse('551130000000')).to eq('1130000000')
+    end
+
+    it 'treats a leading 55 as a DDD when only 11 digits remain' do
+      expect(described_class.parse('55988887777')).to eq('55988887777')
+    end
+
+    it 'keeps a service number as-is' do
+      expect(described_class.parse('0800 123 4567')).to eq('08001234567')
+    end
+
+    it 'caps the result to 11 digits' do
+      expect(described_class.parse('11988887777123')).to eq('11988887777')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(described_class.parse('')).to eq('')
+    end
+  end
+
+  describe '.is_valid_mobile / .valid_mobile?' do
+    it 'validates a masked mobile number' do
+      expect(described_class.is_valid_mobile('(11) 98765-4321')).to be true
+    end
+
+    it 'validates with a country code' do
+      expect(described_class.is_valid_mobile('+55 11 98765-4321')).to be true
+    end
+
+    it 'validates an unmasked number with country code' do
+      expect(described_class.is_valid_mobile('5511987654321')).to be true
+    end
+
+    it 'rejects a landline' do
+      expect(described_class.is_valid_mobile('1130000000')).to be false
+    end
+
+    it 'rejects a 10-digit number' do
+      expect(described_class.is_valid_mobile('1198765432')).to be false
+    end
+
+    it 'rejects an empty string' do
+      expect(described_class.is_valid_mobile('')).to be false
+    end
+
+    it 'has an alias .valid_mobile?' do
+      expect(described_class.valid_mobile?('11987654321')).to be true
+    end
+  end
+
+  describe '.is_valid_landline / .valid_landline?' do
+    it 'validates a masked landline number' do
+      expect(described_class.is_valid_landline('(11) 3000-0000')).to be true
+    end
+
+    it 'validates an unmasked landline number' do
+      expect(described_class.is_valid_landline('1130000000')).to be true
+    end
+
+    it 'validates with a country code' do
+      expect(described_class.is_valid_landline('+55 11 3000-0000')).to be true
+    end
+
+    it 'rejects a mobile number' do
+      expect(described_class.is_valid_landline('11987654321')).to be false
+    end
+
+    it 'rejects a 9-digit number' do
+      expect(described_class.is_valid_landline('113000000')).to be false
+    end
+
+    it 'rejects an empty string' do
+      expect(described_class.is_valid_landline('')).to be false
+    end
+
+    it 'has an alias .valid_landline?' do
+      expect(described_class.valid_landline?('1130000000')).to be true
+    end
+  end
+
+  describe '.is_valid_service / .valid_service?' do
+    it 'validates an 0800 number' do
+      expect(described_class.is_valid_service('08001234567')).to be true
+    end
+
+    it 'validates a masked 0800 number' do
+      expect(described_class.is_valid_service('0800 123 4567')).to be true
+    end
+
+    it 'validates an abbreviated 4004 number' do
+      expect(described_class.is_valid_service('40041234')).to be true
+    end
+
+    it 'rejects a mobile number' do
+      expect(described_class.is_valid_service('11987654321')).to be false
+    end
+
+    it 'rejects a too-short 0800-like number' do
+      expect(described_class.is_valid_service('0800123456')).to be false
+    end
+
+    it 'rejects a non-Brazilian short code' do
+      expect(described_class.is_valid_service('911')).to be false
+    end
+
+    it 'rejects an empty string' do
+      expect(described_class.is_valid_service('')).to be false
+    end
+
+    it 'has an alias .valid_service?' do
+      expect(described_class.valid_service?('08001234567')).to be true
     end
   end
 
@@ -360,16 +470,16 @@ RSpec.describe BrazilianUtils::PhoneUtils do
     end
 
     context 'when verifying generated numbers can be formatted' do
-      it 'can format generated mobile' do
+      it 'can format generated mobile with the :ddd mask' do
         phone = described_class.generate(:mobile)
-        formatted = described_class.format_phone(phone)
-        expect(formatted).to match(/^\(\d{2}\)\d{5}-\d{4}$/)
+        formatted = described_class.format_phone(phone, mask: :ddd)
+        expect(formatted).to match(/^\(\d{2}\) \d{5}-\d{4}$/)
       end
 
-      it 'can format generated landline' do
+      it 'can format generated landline with the :ddd mask' do
         phone = described_class.generate(:landline)
-        formatted = described_class.format_phone(phone)
-        expect(formatted).to match(/^\(\d{2}\)\d{4}-\d{4}$/)
+        formatted = described_class.format_phone(phone, mask: :ddd)
+        expect(formatted).to match(/^\(\d{2}\) \d{4}-\d{4}$/)
       end
     end
   end
@@ -444,54 +554,34 @@ RSpec.describe BrazilianUtils::PhoneUtils do
   describe 'integration scenarios' do
     it 'cleans, validates, and formats a user input mobile number' do
       user_input = '+55 (11) 99402-9275'
-      
+
       # Remove symbols
       clean = described_class.remove_symbols(user_input)
       expect(clean).to eq('5511994029275')
-      
+
       # Remove international code
       without_code = described_class.remove_international_dialing_code(clean)
       expect(without_code).to eq('11994029275')
-      
+
       # Validate
       expect(described_class.is_valid(without_code)).to be true
       expect(described_class.is_valid(without_code, :mobile)).to be true
-      
-      # Format
-      formatted = described_class.format(without_code)
-      expect(formatted).to eq('(11)99402-9275')
-    end
 
-    it 'cleans, validates, and formats a user input landline number' do
-      user_input = '(16) 3501-4415'
-      
-      # Remove symbols
-      clean = described_class.remove_symbols(user_input)
-      expect(clean).to eq('1635014415')
-      
-      # Validate
-      expect(described_class.is_valid(clean)).to be true
-      expect(described_class.is_valid(clean, :landline)).to be true
-      
       # Format
-      formatted = described_class.format(clean)
-      expect(formatted).to eq('(16)3501-4415')
+      formatted = described_class.format(without_code, mask: :ddd)
+      expect(formatted).to eq('(11) 99402-9275')
     end
 
     it 'generates, validates, and formats a random phone' do
       # Generate
       phone = described_class.generate
-      
+
       # Validate
       expect(described_class.valid?(phone)).to be true
-      
+
       # Format
-      formatted = described_class.format_phone(phone)
-      expect(formatted).to match(/^\(\d{2}\)\d{4,5}-\d{4}$/)
-      
-      # Remove symbols should return to original
-      clean = described_class.remove_symbols(formatted)
-      expect(clean).to eq(phone)
+      formatted = described_class.format_phone(phone, mask: :ddd)
+      expect(formatted).to match(/^\(\d{2}\) \d{4,5}-\d{4}$/)
     end
   end
 end

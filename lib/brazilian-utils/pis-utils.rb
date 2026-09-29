@@ -97,7 +97,8 @@ module BrazilianUtils
       return false unless pis.is_a?(String)
       return false unless pis.length == 11
       return false unless pis.match?(/^\d+$/)
-      
+      return false if pis.chars.uniq.length == 1 # e.g. "00000000000", "99999999999"
+
       pis[-1] == checksum(pis[0..9]).to_s
     end
 
@@ -147,5 +148,19 @@ module BrazilianUtils
     end
 
     private_class_method :checksum
+
+    # Removes PIS formatting and keeps only digits, capped to 11 digits.
+    #
+    # @param value [String, Integer] A PIS, with or without formatting.
+    # @return [String] The digits-only value, capped to 11 characters.
+    #
+    # @example
+    #   parse("123.45678.90-1")  #=> "12345678901"
+    #   parse("12345678901123")  #=> "12345678901"
+    def self.parse(value)
+      return '' unless value.is_a?(String) || value.is_a?(Integer)
+
+      value.to_s.gsub(/\D/, '')[0, 11]
+    end
   end
 end

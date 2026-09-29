@@ -131,10 +131,12 @@ module BrazilianUtils
 
     # Generates a random legal process ID.
     #
-    # @param year [Integer] The year for the legal process ID (default is current year).
+    # @param year [Integer, Hash] The year for the legal process ID (default
+    #   is current year), or a single options Hash (as the contract's
+    #   `GenerateProcessoJuridicoParams`) with `:year` and `:court`.
     #   The year should not be in the past.
     # @param orgao [Integer] The judicial segment code (1-9) for the legal process ID
-    #   (default is random)
+    #   (default is random). Ignored when `year` is a Hash.
     #
     # @return [String, nil] A randomly generated legal process ID (20 digits),
     #   or nil if arguments are invalid
@@ -146,9 +148,19 @@ module BrazilianUtils
     #   generate()
     #   #=> "88031888120233030000" (uses current year and random orgao)
     #
+    #   generate(year: 2023, court: 5)
+    #   #=> "51659517020235080562" (contract-style options Hash)
+    #
     #   generate(2022, 10)
     #   #=> nil (year in the past, orgao out of range)
-    def self.generate(year = Time.now.year, orgao = rand(1..9))
+    def self.generate(year = Time.now.year, orgao = nil)
+      if year.is_a?(Hash)
+        options = year
+        year = options[:year] || options['year'] || Time.now.year
+        orgao = options[:court] || options[:orgao] || options['court'] || options['orgao']
+      end
+      orgao ||= rand(1..9)
+
       return nil if year < Time.now.year
       return nil unless (1..9).include?(orgao)
 
@@ -238,5 +250,21 @@ module BrazilianUtils
     end
 
     private_class_method :load_legal_process_data
+
+    # Removes legal process formatting and keeps only digits, capped to 20
+    # digits.
+    #
+    # @param value [String, Integer] A legal process number, with or without
+    #   the CNJ mask.
+    # @return [String] The parsed digits.
+    #
+    # @example
+    #   parse("0002080-25.2012.5.15.0049")  #=> "00020802520125150049"
+    #   parse("00020802520125150049123")    #=> "00020802520125150049"
+    def self.parse(value)
+      return '' unless value.is_a?(String) || value.is_a?(Integer)
+
+      value.to_s.gsub(/\D/, '')[0, 20]
+    end
   end
 end

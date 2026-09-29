@@ -1,7 +1,16 @@
 # frozen_string_literal: true
 
+require 'date'
+
 module BrazilianUtils
   module BoletoUtils
+    # The fator de vencimento epoch (day 1000) before the 2025-02-22 cycle
+    # reset, and how many days apart the two candidate dates for a given
+    # factor are, per the contract's own description. Not independently
+    # verified against a reference implementation (no test cases were
+    # available for `boleto.getInfo`).
+    FATOR_VENCIMENTO_OLD_EPOCH = Date.new(1997, 10, 7)
+    FATOR_VENCIMENTO_CYCLE_GAP_DAYS = 9000
     # Every Digitable Line from Boleto has exactly 47 characters
     DIGITABLE_LINE_LENGTH = 47
 
@@ -51,6 +60,136 @@ module BrazilianUtils
 
       # Alias for is_valid
       alias valid? is_valid
+
+      # Removes boleto formatting and keeps only digits, capped to 47
+      # digits (48 for a boleto de arrecadação, recognized by a leading
+      # `8`).
+      #
+      # @param value [String, Integer]
+      # @return [String]
+      def parse(value)
+        return '' unless value.is_a?(String) || value.is_a?(Integer)
+
+        digits = value.to_s.gsub(/\D/, '')
+        return '' if digits.empty?
+
+        cap = digits[0] == '8' ? 48 : 47
+        digits[0, cap]
+      end
+
+      # @private
+      def apply_mask(digits, group_sizes, separators)
+        chunks = []
+        idx = 0
+        group_sizes.each do |size|
+          break if idx >= digits.length
+
+          chunks << digits[idx, size]
+          idx += size
+        end
+        chunks.each_with_index.map { |c, i| i.zero? ? c : "#{separators[i - 1]}#{c}" }.join
+      end
+
+      # Formats a boleto linha digitável with its printed mask.
+      #
+      # @param value [String, Integer]
+      # @param options [Hash] `:pad` left-pads the value with zeros to the
+      #   length of the pattern before masking.
+      # @return [String]
+      def format(value, options = {})
+        digits = value.to_s.gsub(/\D/, '')
+        pad = options[:pad] || options['pad']
+
+        if pad
+          target = digits[0] == '8' ? 48 : 47
+          digits = digits.rjust(target, '0')
+        end
+
+        return '' if digits.empty?
+
+        if digits.length == 48 && digits[0] == '8'
+          digits.chars.each_slice(12).map { |b| b.join }.map do |block|
+            block.length > 11 ? "#{block[0, 11]}-#{block[11]}" : block
+          end.join(' ')
+        else
+          apply_mask(digits, [5, 5, 5, 6, 5, 6, 1, 14], ['.', ' ', '.', ' ', '.', ' ', ' '])
+        end
+      end
+
+      # Generates a valid random boleto number.
+      #
+      # @param params [Hash] `:type` set to `"arrecadacao"` generates a
+      #   48-digit boleto de arrecadação instead of the default 47-digit
+      #   cobrança bancária linha digitável.
+      # @return [String, nil] `nil` for `type: "arrecadacao"`: it is not
+      #   implemented (this module's {is_valid} itself only recognizes the
+      #   47-digit cobrança bancária form, so a generated arrecadação
+      #   number could not be verified to round-trip through it).
+      def generate(params = {})
+        type = params[:type] || params['type']
+        return nil if type.to_s == 'arrecadacao'
+
+        banco = sprintf('%03d', rand(1..999))
+        moeda = '9'
+        campo_livre = 25.times.map { rand(0..9) }.join
+        fator_vencimento = sprintf('%04d', rand(1000..9999))
+        valor = sprintf('%010d', rand(0..9_999_999_999))
+
+        campo1_free = campo_livre[0, 5]
+        campo2 = campo_livre[5, 10]
+        campo3 = campo_livre[15, 10]
+
+        campo1 = "#{banco}#{moeda}#{campo1_free}"
+        dv1 = get_mod10(campo1)
+        dv2 = get_mod10(campo2)
+        dv3 = get_mod10(campo3)
+
+        barcode_without_dv = "#{banco}#{moeda}#{fator_vencimento}#{valor}#{campo_livre}"
+        dv_geral = get_mod11(barcode_without_dv)
+
+        "#{campo1}#{dv1}#{campo2}#{dv2}#{campo3}#{dv3}#{dv_geral}#{fator_vencimento}#{valor}"
+      end
+
+      # Extracts the amount, due date and bank code from a boleto.
+      #
+      # @note Only the 47-digit cobrança bancária form is supported; a
+      #   boleto de arrecadação (48-digit linha digitável or 44-digit
+      #   barcode) returns nil. The due-date resolution (fator de
+      #   vencimento, including the 2025-02-22 cycle reset) has no
+      #   available test cases and is unverified against a reference
+      #   implementation.
+      #
+      # @param value [String]
+      # @param options [Hash] `:referenceDate` resolves the fator de
+      #   vencimento cycle as of that date (default: today).
+      # @return [Hash, nil]
+      def get_info(value, options = {})
+        return nil unless is_valid(value)
+
+        digits = extract_only_numbers(value)
+        return nil unless digits.length == DIGITABLE_LINE_LENGTH
+
+        barcode = parse_digitable_line(digits)
+        bank_code = barcode[0, 3]
+        fator_vencimento = barcode[5, 4].to_i
+        amount_cents = barcode[9, 10].to_i
+
+        reference_date = options[:referenceDate] || options['referenceDate'] || Date.today
+        reference_date = reference_date.to_date if reference_date.respond_to?(:to_date)
+
+        due_date =
+          if fator_vencimento >= 1000
+            date_a = FATOR_VENCIMENTO_OLD_EPOCH + (fator_vencimento - 1000)
+            date_b = date_a + FATOR_VENCIMENTO_CYCLE_GAP_DAYS
+            (date_a - reference_date).abs <= (date_b - reference_date).abs ? date_a : date_b
+          end
+
+        {
+          bankCode: bank_code,
+          amount: amount_cents,
+          dueDate: due_date
+        }
+      end
 
       private
 

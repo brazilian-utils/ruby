@@ -84,5 +84,58 @@ module BrazilianUtils
     end
 
     private_class_method :calculate_first_rest, :check_second_verificator
+
+    # Formats a CNH number as `000000000-00` (9 digits, hyphen, 2 check
+    # digits). The mask is applied as far as the digits go.
+    #
+    # @param value [String, Integer] The value to format.
+    # @param options [Hash] `:pad` left-pads the value with zeros to 11
+    #   digits first.
+    # @return [String]
+    #
+    # @example
+    #   format("00000000119")  #=> "000000001-19"
+    def self.format(value, options = {})
+      digits = value.to_s.gsub(/\D/, '')
+      digits = digits.rjust(11, '0') if options[:pad] || options['pad']
+      return digits if digits.length <= 9
+
+      "#{digits[0, 9]}-#{digits[9..-1]}"
+    end
+
+    # Removes CNH formatting and keeps only digits, capped to 11 digits.
+    #
+    # @param value [String, Integer]
+    # @return [String]
+    #
+    # @example
+    #   parse("000000001-19")  #=> "00000000119"
+    def self.parse(value)
+      return '' unless value.is_a?(String) || value.is_a?(Integer)
+
+      value.to_s.gsub(/\D/, '')[0, 11]
+    end
+
+    # Generates a valid random CNH number (11 digits, unformatted).
+    #
+    # @return [String]
+    def self.generate
+      loop do
+        base9 = 9.times.map { rand(0..9) }
+        next if base9.uniq.length == 1
+
+        first_rest = calculate_first_rest(base9)
+        first_verificator = first_rest > 9 ? 0 : first_rest
+
+        sum2 = 0
+        9.times { |i| sum2 += base9[i] * (i + 1) }
+        result = sum2 % 11
+        result = (result - 2).negative? ? result + 9 : result - 2 if first_rest > 9
+        second_verificator = result > 9 ? 0 : result
+
+        cnh = "#{base9.join}#{first_verificator}#{second_verificator}"
+        return cnh if valid?(cnh)
+      end
+    end
   end
 end

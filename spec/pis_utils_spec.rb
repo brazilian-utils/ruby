@@ -187,9 +187,8 @@ RSpec.describe BrazilianUtils::PISUtils do
         expect(described_class.is_valid(12345678909)).to be false
       end
 
-      it 'accepts all zeros (the weighted checksum happens to match; PIS has ' \
-         'no repeated-digit rule like CPF/CNPJ do - matches brutils/python)' do
-        expect(described_class.is_valid('00000000000')).to be true
+      it 'rejects all zeros (repeated-digit rule, same as CPF/CNPJ)' do
+        expect(described_class.is_valid('00000000000')).to be false
       end
 
       it 'rejects all ones' do
@@ -249,6 +248,28 @@ RSpec.describe BrazilianUtils::PISUtils do
       has_leading_zero = pis_numbers.any? { |pis| pis[0] == '0' }
       # This might not always be true due to randomness, but with 100 tries it's likely
       # If it fails occasionally, that's acceptable for a random generator test
+    end
+  end
+
+  describe '.parse' do
+    it 'removes formatting' do
+      expect(described_class.parse('123.45678.90-1')).to eq('12345678901')
+    end
+
+    it 'keeps an already-clean value unchanged' do
+      expect(described_class.parse('12345678901')).to eq('12345678901')
+    end
+
+    it 'strips non-digit characters' do
+      expect(described_class.parse('123#Error*&@#45678#Char!90-1')).to eq('12345678901')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(described_class.parse('')).to eq('')
+    end
+
+    it 'caps the result to 11 characters' do
+      expect(described_class.parse('12345678901123')).to eq('12345678901')
     end
   end
 
@@ -331,20 +352,21 @@ RSpec.describe BrazilianUtils::PISUtils do
       expect([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).to include(checksum)
     end
 
-    it 'generates valid checksum for various bases' do
+    it 'generates a valid checksum for various bases' do
+      # '0000000000' and '1111111111' are deliberately excluded: their
+      # checksum happens to complete a run of one repeated digit, which
+      # is never a valid PIS (see the "repeated digits" rule below).
       test_bases = [
-        '0000000000',
-        '1111111111',
         '1234567890',
         '9876543210',
-        '5555555555'
+        '5555555556'
       ]
 
       test_bases.each do |base|
         checksum = described_class.send(:checksum, base)
         expect(checksum).to be >= 0
         expect(checksum).to be <= 9
-        
+
         # Verify the complete PIS is valid
         pis = base + checksum.to_s
         expect(described_class.is_valid(pis)).to be true
@@ -385,11 +407,13 @@ RSpec.describe BrazilianUtils::PISUtils do
   end
 
   describe 'boundary testing' do
-    it 'validates PIS with minimum value (all zeros except checksum)' do
+    it 'rejects the all-zeros PIS even though its checksum digit matches' do
+      # checksum('0000000000') happens to be 0, but 11 repeated zeros is
+      # never a valid PIS (same repeated-digit rule as CPF/CNPJ).
       base = '0000000000'
       checksum = described_class.send(:checksum, base)
       pis = base + checksum.to_s
-      expect(described_class.is_valid(pis)).to be true
+      expect(described_class.is_valid(pis)).to be false
     end
 
     it 'validates PIS with maximum base (9999999999)' do

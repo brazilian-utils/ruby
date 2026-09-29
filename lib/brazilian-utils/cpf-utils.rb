@@ -188,5 +188,18 @@ module BrazilianUtils
     end
 
     private_class_method :hashdigit, :checksum
+
+    # Removes CPF formatting and keeps only digits, capped to 11 digits.
+    #
+    # @param value [String, Integer] A CPF, with or without formatting.
+    # @return [String] The parsed digits.
+    #
+    # @example
+    #   parse("943.895.751-04")  #=> "94389575104"
+    def self.parse(value)
+      return '' unless value.is_a?(String) || value.is_a?(Integer)
+
+      value.to_s.gsub(/\D/, '')[0, 11]
+    end
   end
 end

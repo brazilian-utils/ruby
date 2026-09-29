@@ -62,7 +62,8 @@ BrazilianUtils::CEPUtils.get_address('01310100')  # => {...endereço completo...
 # Telefone
 require 'brazilian-utils/phone-utils'
 BrazilianUtils::PhoneUtils.is_valid('11987654321')  # => true
-BrazilianUtils::PhoneUtils.format('11987654321')  # => "(11)98765-4321"
+BrazilianUtils::PhoneUtils.format('987654321')  # => "98765-4321"
+BrazilianUtils::PhoneUtils.format('11987654321', mask: :ddd)  # => "(11) 98765-4321"
 
 # Placa de Veículo
 require 'brazilian-utils/license-plate-utils'
@@ -77,7 +78,7 @@ BrazilianUtils::VoterIdUtils.generate('SP')  # => "123456780140"
 
 # Moeda
 require 'brazilian-utils/currency-utils'
-BrazilianUtils::CurrencyUtils.format_currency(1234.56)  # => "R$ 1.234,56"
+BrazilianUtils::CurrencyUtils.format_currency(1234.56)  # => "1.234,56"
 BrazilianUtils::CurrencyUtils.number_to_text(1234.56)  # => "mil duzentos e trinta e quatro reais..."
 ```
 
@@ -100,6 +101,33 @@ Para exemplos completos de cada utilitário, consulte a pasta [`examples/`](exam
 - [`PISUtils`](lib/brazilian-utils/pis-utils.rb) - PIS/PASEP
 - [`RENAVAMUtils`](lib/brazilian-utils/renavam-utils.rb) - RENAVAM
 - [`CNHUtils`](lib/brazilian-utils/cnh-utils.rb) - CNH
+- [`TextUtils`](lib/brazilian-utils/text-utils.rb) - Capitalização e remoção de acentos
+- [`NumberUtils`](lib/brazilian-utils/number-utils.rb) - Números por extenso
+- [`StateUtils`](lib/brazilian-utils/state-utils.rb) - Estados brasileiros (UF)
+- [`AreaCodeUtils`](lib/brazilian-utils/area-code-utils.rb) - DDDs
+- [`BankUtils`](lib/brazilian-utils/bank-utils.rb) - Bancos (código COMPE/ISPB)
+- [`BankAccountUtils`](lib/brazilian-utils/bank-account-utils.rb) - Contas bancárias
+- [`MunicipalityUtils`](lib/brazilian-utils/municipality-utils.rb) - Municípios (código IBGE)
+- [`CFOPUtils`](lib/brazilian-utils/cfop-utils.rb) - CFOP
+- [`CNAEUtils`](lib/brazilian-utils/cnae-utils.rb) - CNAE
+- [`CBOUtils`](lib/brazilian-utils/cbo-utils.rb) - CBO
+- [`NCMUtils`](lib/brazilian-utils/ncm-utils.rb) - NCM
+- [`CSOSNUtils`](lib/brazilian-utils/csosn-utils.rb) - CSOSN
+- [`CSTUtils`](lib/brazilian-utils/cst-utils.rb) - CST (ICMS/IPI/PIS-COFINS)
+- [`CEIUtils`](lib/brazilian-utils/cei-utils.rb) - CEI
+- [`CNOUtils`](lib/brazilian-utils/cno-utils.rb) - CNO
+- [`CNSUtils`](lib/brazilian-utils/cns-utils.rb) - Cartão Nacional de Saúde
+- [`CAEPFUtils`](lib/brazilian-utils/caepf-utils.rb) - CAEPF
+- [`CertidaoUtils`](lib/brazilian-utils/certidao-utils.rb) - Certidão de registro civil
+- [`CreditCardUtils`](lib/brazilian-utils/credit-card-utils.rb) - Cartão de crédito/débito (Luhn)
+- [`VINUtils`](lib/brazilian-utils/vin-utils.rb) - Chassi (VIN)
+- [`PassportUtils`](lib/brazilian-utils/passport-utils.rb) - Passaporte
+- [`IBANUtils`](lib/brazilian-utils/iban-utils.rb) - IBAN brasileiro
+- [`NfeKeyUtils`](lib/brazilian-utils/nfe-key-utils.rb) - Chave de acesso NF-e/DF-e
+- [`PixKeyUtils`](lib/brazilian-utils/pix-key-utils.rb) - Chave Pix
+- [`PixPayloadUtils`](lib/brazilian-utils/pix-payload-utils.rb) - Payload Pix (BR Code)
+- [`RegistroProfissionalUtils`](lib/brazilian-utils/registro-profissional-utils.rb) - OAB/CRM/CRO/CRP/CRC
+- [`BoletoUtils`](lib/brazilian-utils/boleto-utils.rb) - Boleto bancário
 
 ---
 
@@ -156,7 +184,8 @@ BrazilianUtils::CEPUtils.get_address('01310100')  # => {...complete address...}
 # Phone
 require 'brazilian-utils/phone-utils'
 BrazilianUtils::PhoneUtils.is_valid('11987654321')  # => true
-BrazilianUtils::PhoneUtils.format('11987654321')  # => "(11)98765-4321"
+BrazilianUtils::PhoneUtils.format('987654321')  # => "98765-4321"
+BrazilianUtils::PhoneUtils.format('11987654321', mask: :ddd)  # => "(11) 98765-4321"
 
 # License Plate
 require 'brazilian-utils/license-plate-utils'
@@ -171,7 +200,7 @@ BrazilianUtils::VoterIdUtils.generate('SP')  # => "123456780140"
 
 # Currency
 require 'brazilian-utils/currency-utils'
-BrazilianUtils::CurrencyUtils.format_currency(1234.56)  # => "R$ 1.234,56"
+BrazilianUtils::CurrencyUtils.format_currency(1234.56)  # => "1.234,56"
 BrazilianUtils::CurrencyUtils.number_to_text(1234.56)  # => "mil duzentos e trinta e quatro reais..."
 ```
 
@@ -251,7 +280,7 @@ Most utilities follow these patterns:
 - `generate(uf)` - Generate for specific state
 
 **Currency:**
-- `format_currency(value)` - Format as R$ X.XXX,XX
+- `format_currency(value)` - Format as X.XXX,XX (pass `symbol: true` for "R$ X.XXX,XX")
 - `number_to_text(value)` - Convert to Brazilian Portuguese text
 
 **Date:**

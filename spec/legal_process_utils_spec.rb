@@ -246,6 +246,25 @@ RSpec.describe BrazilianUtils::LegalProcessUtils do
       end
     end
 
+    context 'with the contract-style options Hash' do
+      it 'accepts year: and court:' do
+        id = described_class.generate(year: 2026, court: 5)
+        expect(id).to match(/^\d{20}$/)
+        expect(id[9, 4]).to eq('2026')
+        expect(id[13, 1]).to eq('5')
+      end
+
+      it 'defaults to the current year and a random court' do
+        id = described_class.generate({})
+        expect(id[9, 4]).to eq(Time.now.year.to_s)
+        expect(id[13, 1].to_i).to be_between(1, 9)
+      end
+
+      it 'returns nil for a past year in the options Hash' do
+        expect(described_class.generate(year: Time.now.year - 1, court: 5)).to be_nil
+      end
+    end
+
     context 'generated IDs structure' do
       it 'places year in correct position' do
         id = described_class.generate(2026, 5)
@@ -317,6 +336,28 @@ RSpec.describe BrazilianUtils::LegalProcessUtils do
         id = described_class.generate(2026, 9)
         expect(described_class.valid?(id)).to be true
       end
+    end
+  end
+
+  describe '.parse' do
+    it 'removes the CNJ mask' do
+      expect(described_class.parse('0002080-25.2012.5.15.0049')).to eq('00020802520125150049')
+    end
+
+    it 'keeps an already-clean value unchanged' do
+      expect(described_class.parse('00020802520125150049')).to eq('00020802520125150049')
+    end
+
+    it 'strips non-digit characters' do
+      expect(described_class.parse('0002080@$25201%!@2515.%0049')).to eq('00020802520125150049')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(described_class.parse('')).to eq('')
+    end
+
+    it 'caps the result to 20 characters' do
+      expect(described_class.parse('00020802520125150049123')).to eq('00020802520125150049')
     end
   end
 

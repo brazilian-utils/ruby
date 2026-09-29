@@ -19,6 +19,28 @@ describe BrazilianUtils::CEPUtils do
     end
   end
 
+  describe '.parse' do
+    it 'removes formatting' do
+      expect(BrazilianUtils::CEPUtils.parse('01001-000')).to eq('01001000')
+    end
+
+    it 'keeps an already-clean value unchanged' do
+      expect(BrazilianUtils::CEPUtils.parse('01001000')).to eq('01001000')
+    end
+
+    it 'strips non-digit characters' do
+      expect(BrazilianUtils::CEPUtils.parse('a0.10cr01?00#ab0')).to eq('01001000')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(BrazilianUtils::CEPUtils.parse('')).to eq('')
+    end
+
+    it 'caps the result to 8 characters' do
+      expect(BrazilianUtils::CEPUtils.parse('01001000123')).to eq('01001000')
+    end
+  end
+
   describe '.format_cep' do
     it 'formats a valid 8-digit CEP' do
       expect(BrazilianUtils::CEPUtils.format_cep('12345678')).to eq('12345-678')
@@ -201,6 +223,19 @@ describe BrazilianUtils::CEPUtils do
     it 'raises ArgumentError for invalid UF when raise_exceptions is true' do
       expect do
         BrazilianUtils::CEPUtils.get_cep_information_from_address('XX', 'City', 'Street', raise_exceptions: true)
+      end.to raise_error(ArgumentError, 'Invalid UF: XX')
+    end
+
+    it 'also accepts a single options Hash (state:/city:/street:), as the contract does' do
+      result = BrazilianUtils::CEPUtils.get_cep_information_from_address({ state: 'XX', city: 'City', street: 'Street' })
+      expect(result).to be_nil
+    end
+
+    it 'raises ArgumentError from the Hash form when raise_exceptions is true' do
+      expect do
+        BrazilianUtils::CEPUtils.get_cep_information_from_address(
+          { state: 'XX', city: 'City', street: 'Street', raise_exceptions: true }
+        )
       end.to raise_error(ArgumentError, 'Invalid UF: XX')
     end
 

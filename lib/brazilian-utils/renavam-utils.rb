@@ -109,5 +109,19 @@ module BrazilianUtils
     end
 
     private_class_method :calculate_renavam_dv
+
+    # Generates a valid random RENAVAM (11 digits: 10 base digits plus the
+    # check digit), unformatted.
+    #
+    # @return [String]
+    def self.generate
+      loop do
+        base = 10.times.map { rand(0..9) }.join
+        next if base.chars.uniq.length == 1
+
+        renavam = base + calculate_renavam_dv(base).to_s
+        return renavam if is_valid_renavam(renavam)
+      end
+    end
   end
 end

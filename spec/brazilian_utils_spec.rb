@@ -259,4 +259,22 @@ describe BrazilianUtils::CPFUtils do
       expect(BrazilianUtils::CPFUtils).not_to respond_to(:checksum)
     end
   end
+
+  describe '.parse' do
+    it 'removes formatting' do
+      expect(BrazilianUtils::CPFUtils.parse('943.895.751-04')).to eq('94389575104')
+    end
+
+    it 'strips non-digit characters' do
+      expect(BrazilianUtils::CPFUtils.parse('943.?ABC895.751-04abc')).to eq('94389575104')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(BrazilianUtils::CPFUtils.parse('')).to eq('')
+    end
+
+    it 'caps the result to 11 characters' do
+      expect(BrazilianUtils::CPFUtils.parse('94389575104123')).to eq('94389575104')
+    end
+  end
 end

@@ -70,37 +70,55 @@ RSpec.describe BrazilianUtils::LicensePlateUtils do
     end
 
     context 'when conversion fails' do
-      it 'returns nil for invalid format' do
-        expect(described_class.convert_to_mercosul('ABCD123')).to be_nil
+      it 'returns an empty string for invalid format' do
+        expect(described_class.convert_to_mercosul('ABCD123')).to eq('')
       end
 
-      it 'returns nil for Mercosul format (already converted)' do
-        expect(described_class.convert_to_mercosul('ABC1D34')).to be_nil
+      it 'returns an empty string for Mercosul format (already converted)' do
+        expect(described_class.convert_to_mercosul('ABC1D34')).to eq('')
       end
 
-      it 'returns nil for too short string' do
-        expect(described_class.convert_to_mercosul('ABC123')).to be_nil
+      it 'returns an empty string for too short string' do
+        expect(described_class.convert_to_mercosul('ABC123')).to eq('')
       end
 
-      it 'returns nil for too long string' do
-        expect(described_class.convert_to_mercosul('ABC12345')).to be_nil
+      it 'returns an empty string for too long string' do
+        expect(described_class.convert_to_mercosul('ABC12345')).to eq('')
       end
 
-      it 'returns nil for empty string' do
-        expect(described_class.convert_to_mercosul('')).to be_nil
+      it 'returns an empty string for empty string' do
+        expect(described_class.convert_to_mercosul('')).to eq('')
       end
 
-      it 'returns nil for non-string input' do
-        expect(described_class.convert_to_mercosul(nil)).to be_nil
+      it 'returns an empty string for non-string input' do
+        expect(described_class.convert_to_mercosul(nil)).to eq('')
       end
 
-      it 'returns nil for numeric input' do
-        expect(described_class.convert_to_mercosul(1234567)).to be_nil
+      it 'returns an empty string for numeric input' do
+        expect(described_class.convert_to_mercosul(1234567)).to eq('')
       end
 
-      it 'returns nil for plate with special characters' do
-        expect(described_class.convert_to_mercosul('ABC@1234')).to be_nil
+      it 'returns an empty string for plate with special characters' do
+        expect(described_class.convert_to_mercosul('ABC@1234')).to eq('')
       end
+    end
+  end
+
+  describe '.parse' do
+    it 'removes the hyphen and upcases' do
+      expect(described_class.parse('abc-1234')).to eq('ABC1234')
+    end
+
+    it 'upcases a lowercase Mercosul plate' do
+      expect(described_class.parse('abc1d23')).to eq('ABC1D23')
+    end
+
+    it 'returns an empty string for empty input' do
+      expect(described_class.parse('')).to eq('')
+    end
+
+    it 'caps the result to 7 characters' do
+      expect(described_class.parse('abc123456')).to eq('ABC1234')
     end
   end
 

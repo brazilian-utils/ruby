@@ -144,6 +144,20 @@ module BrazilianUtils
       8.times.map { rand(10) }.join
     end
 
+    # Removes CEP formatting and keeps only digits, capped to 8 digits.
+    #
+    # @param value [String, Integer] A CEP, with or without formatting.
+    # @return [String] The parsed digits.
+    #
+    # @example
+    #   parse("01001-000")      #=> "01001000"
+    #   parse("01001000123")    #=> "01001000"
+    def self.parse(value)
+      return '' unless value.is_a?(String) || value.is_a?(Integer)
+
+      value.to_s.gsub(/\D/, '')[0, 8]
+    end
+
     # API OPERATIONS
     ################
 
@@ -251,8 +265,18 @@ module BrazilianUtils
     #   #=> CEPNotFound: SP - Example - Example
     #
     # @see https://viacep.com.br/
-    def self.get_cep_information_from_address(federal_unit, city, street, raise_exceptions: false)
+    def self.get_cep_information_from_address(federal_unit, city = nil, street = nil, raise_exceptions: false)
       base_api_url = 'https://viacep.com.br/ws/%s/%s/%s/json/'
+
+      # Accept the contract's single-Hash-argument form, e.g.
+      # get_cep_information_from_address(state: "SP", city: "São Paulo", street: "Paulista")
+      if federal_unit.is_a?(Hash)
+        params = federal_unit
+        federal_unit = params[:state] || params[:uf] || params['state'] || params['uf']
+        city = params[:city] || params['city']
+        street = params[:street] || params['street']
+        raise_exceptions = params[:raise_exceptions] || params['raise_exceptions'] || raise_exceptions
+      end
 
       # Validate UF
       uf_code = federal_unit.to_s.upcase

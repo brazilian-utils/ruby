@@ -1,0 +1,294 @@
+{
+ "icmsOrigin": {
+  "description": "Tabela A - Origem da Mercadoria ou Serviço (1 digit, used as the first digit of the 3-digit ICMS CST)",
+  "count": 9,
+  "entries": [
+   {
+    "code": "0",
+    "description": "Nacional, exceto as indicadas nos códigos 3, 4, 5 e 8"
+   },
+   {
+    "code": "1",
+    "description": "Estrangeira - importação direta, exceto a indicada no código 6"
+   },
+   {
+    "code": "2",
+    "description": "Estrangeira - adquirida no mercado interno, exceto a indicada no código 7"
+   },
+   {
+    "code": "3",
+    "description": "Nacional, com conteúdo de importação superior a 40% e inferior ou igual a 70%"
+   },
+   {
+    "code": "4",
+    "description": "Nacional, produzida em conformidade com os processos produtivos básicos"
+   },
+   {
+    "code": "5",
+    "description": "Nacional, com conteúdo de importação inferior ou igual a 40%"
+   },
+   {
+    "code": "6",
+    "description": "Estrangeira - importação direta, sem similar nacional, constante em lista da CAMEX e gás natural"
+   },
+   {
+    "code": "7",
+    "description": "Estrangeira - adquirida no mercado interno, sem similar nacional, constante em lista da CAMEX e gás natural"
+   },
+   {
+    "code": "8",
+    "description": "Nacional, com conteúdo de importação superior a 70%"
+   }
+  ]
+ },
+ "icmsCst": {
+  "description": "Tabela B - Tributação pelo ICMS (2 digits, used as the last two digits of the 3-digit ICMS CST)",
+  "count": 11,
+  "entries": [
+   {
+    "code": "00",
+    "description": "Tributada integralmente"
+   },
+   {
+    "code": "10",
+    "description": "Tributada e com cobrança do ICMS por substituição tributária"
+   },
+   {
+    "code": "20",
+    "description": "Com redução de base de cálculo"
+   },
+   {
+    "code": "30",
+    "description": "Isenta ou não tributada e com cobrança do ICMS por substituição tributária"
+   },
+   {
+    "code": "40",
+    "description": "Isenta"
+   },
+   {
+    "code": "41",
+    "description": "Não tributada"
+   },
+   {
+    "code": "50",
+    "description": "Com suspensão"
+   },
+   {
+    "code": "51",
+    "description": "Com diferimento"
+   },
+   {
+    "code": "60",
+    "description": "ICMS cobrado anteriormente por substituição tributária"
+   },
+   {
+    "code": "70",
+    "description": "Com redução de base de cálculo e cobrança do ICMS por substituição tributária"
+   },
+   {
+    "code": "90",
+    "description": "Outras"
+   }
+  ]
+ },
+ "ipiCst": {
+  "description": "Codigo de Situacao Tributaria do IPI (2 digits) - IN RFB no 1.009/2010",
+  "count": 14,
+  "entries": [
+   {
+    "code": "00",
+    "description": "Entrada com recuperação de crédito"
+   },
+   {
+    "code": "01",
+    "description": "Entrada tributada com alíquota zero"
+   },
+   {
+    "code": "02",
+    "description": "Entrada isenta"
+   },
+   {
+    "code": "03",
+    "description": "Entrada não tributada"
+   },
+   {
+    "code": "04",
+    "description": "Entrada imune"
+   },
+   {
+    "code": "05",
+    "description": "Entrada com suspensão"
+   },
+   {
+    "code": "49",
+    "description": "Outras entradas"
+   },
+   {
+    "code": "50",
+    "description": "Saída tributada"
+   },
+   {
+    "code": "51",
+    "description": "Saída tributável com alíquota zero"
+   },
+   {
+    "code": "52",
+    "description": "Saída isenta"
+   },
+   {
+    "code": "53",
+    "description": "Saída não tributada"
+   },
+   {
+    "code": "54",
+    "description": "Saída imune"
+   },
+   {
+    "code": "55",
+    "description": "Saída com suspensão"
+   },
+   {
+    "code": "99",
+    "description": "Outras saídas"
+   }
+  ]
+ },
+ "pisCofinsCst": {
+  "description": "Codigo de Situacao Tributaria do PIS/COFINS (2 digits) - Guia Pratico EFD-Contribuicoes, Tabelas 4.3.3 e 4.3.4. PIS and COFINS share this same table.",
+  "count": 33,
+  "entries": [
+   {
+    "code": "01",
+    "description": "Operação tributável com alíquota básica"
+   },
+   {
+    "code": "02",
+    "description": "Operação tributável com alíquota diferenciada"
+   },
+   {
+    "code": "03",
+    "description": "Operação tributável com alíquota por unidade de medida de produto"
+   },
+   {
+    "code": "04",
+    "description": "Operação tributável monofásica - revenda a alíquota zero"
+   },
+   {
+    "code": "05",
+    "description": "Operação tributável por substituição tributária"
+   },
+   {
+    "code": "06",
+    "description": "Operação tributável a alíquota zero"
+   },
+   {
+    "code": "07",
+    "description": "Operação isenta da contribuição"
+   },
+   {
+    "code": "08",
+    "description": "Operação sem incidência da contribuição"
+   },
+   {
+    "code": "09",
+    "description": "Operação com suspensão da contribuição"
+   },
+   {
+    "code": "49",
+    "description": "Outras operações de saída"
+   },
+   {
+    "code": "50",
+    "description": "Operação com direito a crédito - vinculada exclusivamente a receita tributada no mercado interno"
+   },
+   {
+    "code": "51",
+    "description": "Operação com direito a crédito - vinculada exclusivamente a receita não tributada no mercado interno"
+   },
+   {
+    "code": "52",
+    "description": "Operação com direito a crédito - vinculada exclusivamente a receita de exportação"
+   },
+   {
+    "code": "53",
+    "description": "Operação com direito a crédito - vinculada a receitas tributadas e não tributadas no mercado interno"
+   },
+   {
+    "code": "54",
+    "description": "Operação com direito a crédito - vinculada a receitas tributadas no mercado interno e de exportação"
+   },
+   {
+    "code": "55",
+    "description": "Operação com direito a crédito - vinculada a receitas não tributadas no mercado interno e de exportação"
+   },
+   {
+    "code": "56",
+    "description": "Operação com direito a crédito - vinculada a receitas tributadas e não tributadas no mercado interno e de exportação"
+   },
+   {
+    "code": "60",
+    "description": "Crédito presumido - operação de aquisição vinculada exclusivamente a receita tributada no mercado interno"
+   },
+   {
+    "code": "61",
+    "description": "Crédito presumido - operação de aquisição vinculada exclusivamente a receita não tributada no mercado interno"
+   },
+   {
+    "code": "62",
+    "description": "Crédito presumido - operação de aquisição vinculada exclusivamente a receita de exportação"
+   },
+   {
+    "code": "63",
+    "description": "Crédito presumido - operação de aquisição vinculada a receitas tributadas e não tributadas no mercado interno"
+   },
+   {
+    "code": "64",
+    "description": "Crédito presumido - operação de aquisição vinculada a receitas tributadas no mercado interno e de exportação"
+   },
+   {
+    "code": "65",
+    "description": "Crédito presumido - operação de aquisição vinculada a receitas não tributadas no mercado interno e de exportação"
+   },
+   {
+    "code": "66",
+    "description": "Crédito presumido - operação de aquisição vinculada a receitas tributadas e não tributadas no mercado interno e de exportação"
+   },
+   {
+    "code": "67",
+    "description": "Crédito presumido - outras operações"
+   },
+   {
+    "code": "70",
+    "description": "Operação de aquisição sem direito a crédito"
+   },
+   {
+    "code": "71",
+    "description": "Operação de aquisição com isenção"
+   },
+   {
+    "code": "72",
+    "description": "Operação de aquisição com suspensão"
+   },
+   {
+    "code": "73",
+    "description": "Operação de aquisição a alíquota zero"
+   },
+   {
+    "code": "74",
+    "description": "Operação de aquisição sem incidência da contribuição"
+   },
+   {
+    "code": "75",
+    "description": "Operação de aquisição por substituição tributária"
+   },
+   {
+    "code": "98",
+    "description": "Outras operações de entrada"
+   },
+   {
+    "code": "99",
+    "description": "Outras operações"
+   }
+  ]
+ }
+}

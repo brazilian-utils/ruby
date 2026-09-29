@@ -11,37 +11,105 @@ module BrazilianUtils
   module PhoneUtils
     # Pattern for mobile phone numbers (11 digits: DDD + 9 + 8 digits)
     MOBILE_PATTERN = /^[1-9][1-9][9]\d{8}$/.freeze
-    
+
     # Pattern for landline phone numbers (10 digits: DDD + [2-5] + 7 digits)
     LANDLINE_PATTERN = /^[1-9][1-9][2-5]\d{7}$/.freeze
 
     # Pattern for international dialing code (+55 or 55)
     INTERNATIONAL_CODE_PATTERN = /\+?55/.freeze
 
-    # Formats a Brazilian phone number into the standard pattern.
+    # Códigos Não Geográficos (Anatel) that take 7 digits.
+    SERVICE_CNG_PREFIXES = %w[0300 0303 0500 0800 0900].freeze
+
+    # 3-digit public-utility numbers designated by Anatel (não exaustivo).
+    SERVICE_SHORT_CODES = %w[
+      100 101 102 104 105 106 107 108 110 111 116 118 119 120 121 122 123
+      125 126 127 128 129 130 131 132 133 135 136 137 138 140 141 144 145
+      146 147 148 150 151 152 153 154 155 156 158 159 160 161 162 163 164
+      171 172 173 174 175 176 177 178 179 180 181 185 188 189 190 191 192
+      193 194 195 196 197 198 199
+    ].freeze
+
+    # Removes a leading country code (`+55`, `0055` or a bare `55`) from an
+    # already digits-only string, but only when doing so leaves 10 or 11
+    # digits (so a DDD of `55`, e.g. Rio Grande do Sul, is not mistaken for
+    # the country code).
     #
-    # Formats as (DD)NNNNN-NNNN for both mobile and landline numbers.
+    # @param digits [String] A digits-only phone number.
+    # @return [String] The digits, with the country code removed if applicable.
     #
-    # @param phone [String] A string representing the phone number (digits only)
+    # @private
+    def self.strip_country_code(digits)
+      if digits.start_with?('0055') && [10, 11].include?(digits.length - 4)
+        digits[4..-1]
+      elsif digits.start_with?('55') && [10, 11].include?(digits.length - 2)
+        digits[2..-1]
+      else
+        digits
+      end
+    end
+
+    private_class_method :strip_country_code
+
+    # Removes phone formatting and keeps only digits, capped to 11 digits.
     #
-    # @return [String, nil] The formatted phone number or nil if invalid
+    # A country code (`+55`, `0055` or a bare `55`) is stripped only when 10
+    # or 11 digits are left, so an area code of `55` is not mistaken for it.
+    #
+    # @param value [String, Integer] The value to parse.
+    # @return [String] The parsed digits.
     #
     # @example
-    #   format_phone("11994029275")
-    #   #=> "(11)99402-9275"
-    #
-    #   format_phone("1635014415")
-    #   #=> "(16)3501-4415"
-    #
-    #   format_phone("333333")
-    #   #=> nil
-    def self.format_phone(phone)
-      return nil unless is_valid(phone)
+    #   parse("(11) 98888-7777")     #=> "11988887777"
+    #   parse("+55 11 98888-7777")   #=> "11988887777"
+    #   parse("55988887777")         #=> "55988887777" (55 read as DDD)
+    def self.parse(value)
+      return '' unless value.is_a?(String) || value.is_a?(Integer)
 
-      ddd = phone[0..1]
-      phone_number = phone[2..-1]
+      digits = value.to_s.gsub(/\D/, '')
+      return '' if digits.empty?
 
-      "(#{ddd})#{phone_number[0..-5]}-#{phone_number[-4..-1]}"
+      strip_country_code(digits)[0, 11]
+    end
+
+    # Formats a Brazilian phone number.
+    #
+    # Without `options`, formats as the subscriber number only (`sn` mask,
+    # no DDD): e.g. `"988887777"` becomes `"98888-7777"`. Other masks:
+    # `:ddd` (`(11) 99402-9275`), `:e164` (`+5511994029275`),
+    # `:international` (`+55 11 99402-9275`) and `:service`
+    # (`0800 123 4567`).
+    #
+    # @param phone [String, Integer] A phone number, with or without formatting.
+    # @param options [Hash] `:mask` picks the mask (default `:sn`).
+    #
+    # @return [String] The formatted phone number, or an empty string when
+    #   there is nothing to format.
+    #
+    # @example
+    #   format_phone("988887777")     #=> "98888-7777"
+    #   format_phone("1130000000")    #=> "11300-0000"
+    #   format_phone("11994029275", mask: :ddd) #=> "(11) 99402-9275"
+    def self.format_phone(phone, options = {})
+      return '' unless phone.is_a?(String) || phone.is_a?(Integer)
+
+      digits = phone.to_s.gsub(/\D/, '')
+      return '' if digits.empty?
+
+      mask = (options[:mask] || options['mask'] || :sn).to_s
+
+      case mask
+      when 'ddd'
+        format_ddd_mask(digits)
+      when 'e164'
+        format_e164_mask(digits)
+      when 'international'
+        format_international_mask(digits)
+      when 'service'
+        format_service_mask(digits)
+      else
+        format_subscriber_number_mask(digits)
+      end
     end
 
     # Alias for format_phone
@@ -49,52 +117,163 @@ module BrazilianUtils
       alias format format_phone
     end
 
-    # Returns if a Brazilian phone number is valid.
+    # @private
+    def self.format_subscriber_number_mask(digits)
+      d = digits[0, [digits.length, 9].min]
+      return d if d.length <= 5
+
+      "#{d[0, 5]}-#{d[5..-1]}"
+    end
+
+    private_class_method :format_subscriber_number_mask
+
+    # @private
+    def self.format_ddd_mask(digits)
+      d = strip_country_code(digits)
+      return '' unless d.length == 10 || d.length == 11
+
+      ddd = d[0, 2]
+      subscriber = d[2..-1]
+      "(#{ddd}) #{subscriber[0..-5]}-#{subscriber[-4..-1]}"
+    end
+
+    private_class_method :format_ddd_mask
+
+    # @private
+    def self.format_e164_mask(digits)
+      d = strip_country_code(digits)
+      return '' unless d.length == 10 || d.length == 11
+
+      "+55#{d}"
+    end
+
+    private_class_method :format_e164_mask
+
+    # @private
+    def self.format_international_mask(digits)
+      d = strip_country_code(digits)
+      return '' unless d.length == 10 || d.length == 11
+
+      ddd = d[0, 2]
+      subscriber = d[2..-1]
+      "+55 #{ddd} #{subscriber[0..-5]}-#{subscriber[-4..-1]}"
+    end
+
+    private_class_method :format_international_mask
+
+    # @private
+    def self.format_service_mask(digits)
+      if digits.length == 11 && SERVICE_CNG_PREFIXES.include?(digits[0, 4])
+        "#{digits[0, 4]} #{digits[4, 3]} #{digits[7, 4]}"
+      elsif digits.length == 8
+        "#{digits[0, 4]}-#{digits[4, 4]}"
+      else
+        digits
+      end
+    end
+
+    private_class_method :format_service_mask
+
+    # Returns if a Brazilian phone number is valid (mobile or landline).
     #
-    # It does not verify if the number actually exists.
+    # A country code (`+55`, `0055` or a bare `55`) is accepted and removed
+    # first, as in {parse}.
     #
-    # @param phone_number [String] The phone number to validate (digits only, no country code)
-    # @param type [Symbol, String, nil] :mobile, :landline, "mobile", or "landline".
+    # @param phone_number [String] The phone number to validate.
+    # @param type [Symbol, String, Hash, nil] :mobile, :landline, "mobile",
+    #   "landline", or a Hash of options (`:type`, `:mobile_version`).
     #   If not specified, checks for either type.
     #
     # @return [Boolean] True if the phone number is valid, false otherwise
     #
     # @example
-    #   is_valid("11994029275")
-    #   #=> true (mobile)
-    #
-    #   is_valid("1635014415")
-    #   #=> true (landline)
-    #
-    #   is_valid("11994029275", :mobile)
-    #   #=> true
-    #
-    #   is_valid("1635014415", :mobile)
-    #   #=> false
-    #
-    #   is_valid("1635014415", :landline)
-    #   #=> true
-    #
-    #   is_valid("123456")
-    #   #=> false
+    #   is_valid("11994029275")   #=> true (mobile)
+    #   is_valid("1635014415")    #=> true (landline)
+    #   is_valid("+5511994029275") #=> true (country code stripped first)
     def self.is_valid(phone_number, type = nil)
       return false unless phone_number.is_a?(String)
 
-      type_str = type.to_s if type
+      options = type.is_a?(Hash) ? type : { type: type }
+      type_str = options[:type] ? options[:type].to_s : nil
+      mobile_version = options[:mobile_version] || 1
+
+      digits = phone_number.to_s.gsub(/\D/, '')
+      return false if digits.empty?
+
+      value = strip_country_code(digits)
 
       case type_str
       when 'mobile'
-        valid_mobile?(phone_number)
+        mobile_number_matches?(value, mobile_version)
       when 'landline'
-        valid_landline?(phone_number)
+        landline_number_matches?(value)
+      when 'service'
+        service_number_matches?(value)
       else
-        valid_mobile?(phone_number) || valid_landline?(phone_number)
+        mobile_number_matches?(value, mobile_version) || landline_number_matches?(value)
       end
     end
 
     # Alias for is_valid
     class << self
       alias valid? is_valid
+    end
+
+    # Validates if a phone number is a valid Brazilian mobile phone (DDD +
+    # 9 digits). A country code is accepted and removed first, as in {parse}.
+    #
+    # @param value [String] The phone number to validate.
+    # @param options [Hash] `:version` 1 (default, subscriber digit 6-9) or
+    #   2 (Resolução Anatel nº 749/2022: subscriber digit 7-9, no 700 series).
+    # @return [Boolean]
+    def self.is_valid_mobile(value, options = {})
+      return false unless value.is_a?(String)
+
+      digits = value.to_s.gsub(/\D/, '')
+      return false if digits.empty?
+
+      version = options[:version] || options['version'] || 1
+      mobile_number_matches?(strip_country_code(digits), version)
+    end
+
+    class << self
+      alias valid_mobile? is_valid_mobile
+    end
+
+    # Validates if a phone number is a valid Brazilian landline phone (DDD +
+    # 8 digits). A country code is accepted and removed first, as in {parse}.
+    #
+    # @param value [String]
+    # @return [Boolean]
+    def self.is_valid_landline(value)
+      return false unless value.is_a?(String)
+
+      digits = value.to_s.gsub(/\D/, '')
+      return false if digits.empty?
+
+      landline_number_matches?(strip_country_code(digits))
+    end
+
+    class << self
+      alias valid_landline? is_valid_landline
+    end
+
+    # Validates if a phone number is a valid Brazilian service number
+    # (Código Não Geográfico or a 3-digit public-utility code).
+    #
+    # @param value [String]
+    # @return [Boolean]
+    def self.is_valid_service(value)
+      return false unless value.is_a?(String)
+
+      digits = value.to_s.gsub(/\D/, '')
+      return false if digits.empty?
+
+      service_number_matches?(digits)
+    end
+
+    class << self
+      alias valid_service? is_valid_service
     end
 
     # Removes common symbols from a Brazilian phone number string.
@@ -202,17 +381,29 @@ module BrazilianUtils
     # Mobile pattern: DDD (2 digits 1-9) + 9 + 8 digits (total 11 digits)
     #
     # @param phone_number [String] The mobile number to validate
+    # @param version [Integer] 1 (default) or 2, see {is_valid_mobile}.
     #
     # @return [Boolean] True if valid mobile, false otherwise
     #
     # @private
-    def self.valid_mobile?(phone_number)
+    def self.mobile_number_matches?(phone_number, version = 1)
       return false unless phone_number.is_a?(String)
+      return false unless MOBILE_PATTERN.match?(phone_number.strip)
 
-      MOBILE_PATTERN.match?(phone_number.strip)
+      subscriber_first_digit = phone_number.strip[3]
+
+      case version.to_i
+      when 2
+        return false unless %w[7 8 9].include?(subscriber_first_digit)
+        return false if phone_number.strip[3, 3] == '700'
+
+        true
+      else
+        true
+      end
     end
 
-    private_class_method :valid_mobile?
+    private_class_method :mobile_number_matches?
 
     # Returns if a Brazilian landline number is valid.
     #
@@ -223,13 +414,33 @@ module BrazilianUtils
     # @return [Boolean] True if valid landline, false otherwise
     #
     # @private
-    def self.valid_landline?(phone_number)
+    def self.landline_number_matches?(phone_number)
       return false unless phone_number.is_a?(String)
 
       LANDLINE_PATTERN.match?(phone_number.strip)
     end
 
-    private_class_method :valid_landline?
+    private_class_method :landline_number_matches?
+
+    # Returns if a value is a valid Brazilian service number.
+    #
+    # @param value [String] Digits-only phone number.
+    # @return [Boolean]
+    #
+    # @private
+    def self.service_number_matches?(value)
+      return false unless value.is_a?(String)
+
+      v = value.strip
+
+      return true if v.length == 11 && SERVICE_CNG_PREFIXES.include?(v[0, 4])
+      return true if v.length == 8 && %w[300 400].include?(v[0, 3])
+      return true if v.length == 3 && SERVICE_SHORT_CODES.include?(v)
+
+      false
+    end
+
+    private_class_method :service_number_matches?
 
     # Generates a valid DDD (area code) number.
     #

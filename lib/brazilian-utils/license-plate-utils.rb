@@ -34,19 +34,19 @@ module BrazilianUtils
     #   #=> "ABC1C34"
     #
     #   convert_to_mercosul("ABC4*67")
-    #   #=> nil
+    #   #=> ""
     def self.convert_to_mercosul(license_plate)
-      return nil unless license_plate.is_a?(String)
+      return '' unless license_plate.is_a?(String)
 
       clean = remove_symbols(license_plate).upcase
-      return nil unless valid_old_format?(clean)
+      return '' unless valid_old_format?(clean)
 
       chars = clean.chars
-      
+
       # Convert the 5th character (index 4) - the first digit after the letters
       # 0→A, 1→B, 2→C, etc.
       chars[4] = ('A'.ord + chars[4].to_i).chr
-      
+
       chars.join
     end
 
@@ -279,5 +279,21 @@ module BrazilianUtils
     end
 
     private_class_method :valid_mercosul?
+
+    # Removes separators from a license plate, upper-cases it and caps it to
+    # 7 characters.
+    #
+    # @param value [String] A license plate string, in any case, with or
+    #   without separators.
+    # @return [String] The parsed value.
+    #
+    # @example
+    #   parse("abc-1234")     #=> "ABC1234"
+    #   parse("abc123456")    #=> "ABC1234"
+    def self.parse(value)
+      return '' unless value.is_a?(String)
+
+      remove_symbols(value).upcase[0, 7]
+    end
   end
 end
