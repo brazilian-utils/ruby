@@ -21,7 +21,6 @@ Gem::Specification.new do |spec|
   # LoadError on `require 'bigdecimal'`.
   spec.add_dependency "bigdecimal"
 
-  spec.add_development_dependency "bundler", "~> 2.4"
   spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency "rspec", "~> 3.12"
 end
